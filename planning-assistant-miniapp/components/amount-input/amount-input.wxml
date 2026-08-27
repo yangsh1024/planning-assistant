@@ -1,0 +1,7 @@
+<!-- components/amount-input/amount-input.wxml -->
+<view class="amount-input-wrapper">
+  <view class="amount-display">
+    <text class="currency-symbol">¥</text>
+    <input class="amount-text" type="digit" value="{{displayValue}}" placeholder="0.00" placeholder-class="amount-placeholder" maxlength="12" bindinput="onInput" />
+  </view>
+</view>

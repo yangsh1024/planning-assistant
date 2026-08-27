@@ -1,0 +1,62 @@
+# 放置位置示例：/etc/nginx/conf.d/planning-assistant.conf
+# 将 __API_DOMAIN__ 与证书路径替换为真实值后，再执行 nginx -t。
+
+upstream planning_assistant_backend {
+    server 127.0.0.1:18081;
+    keepalive 16;
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name __API_DOMAIN__;
+
+    # 证书签发时保留此目录；没有 HTTP-01 验证需求时可直接跳转 HTTPS。
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name __API_DOMAIN__;
+
+    # 替换为证书实际路径，例如 /etc/letsencrypt/live/__API_DOMAIN__/fullchain.pem。
+    ssl_certificate     /etc/letsencrypt/live/__API_DOMAIN__/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/__API_DOMAIN__/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:10m;
+
+    server_tokens off;
+    gzip on;
+    gzip_types application/json application/javascript text/css;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options DENY always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+
+    # 如需基础限流，请先在 nginx.conf 的 http 块中定义：
+    # limit_req_zone $binary_remote_addr zone=planning_api:10m rate=10r/s;
+    location /api/ {
+        # limit_req zone=planning_api burst=20 nodelay;
+        proxy_pass http://planning_assistant_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
+    }
+
+    location / {
+        return 404;
+    }
+}

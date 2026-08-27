@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "新增开支",
+  "usingComponents": {
+    "amount-input": "/components/amount-input/amount-input",
+    "date-picker": "/components/date-picker/date-picker",
+    "selector": "/components/selector/selector"
+  }
+}

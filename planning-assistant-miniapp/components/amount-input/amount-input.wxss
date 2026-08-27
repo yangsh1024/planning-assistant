@@ -1,0 +1,38 @@
+/* components/amount-input/amount-input.wxss */
+.amount-input-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.amount-display {
+  background: var(--accent-bg);
+  border-radius: 16rpx;
+  padding: 32rpx 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8rpx;
+  margin-bottom: 24rpx;
+}
+
+.currency-symbol {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.amount-text {
+  font-size: 64rpx;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 2rpx;
+  min-width: 120rpx;
+  text-align: left;
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+}
+
+.amount-placeholder {
+  color: var(--text-3);
+}

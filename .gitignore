@@ -1,0 +1,22 @@
+# 小程序本机/部署运行配置；从 utils/config.example.js 复制后填写。
+planning-assistant-miniapp/utils/config.js
+planning-assistant-miniapp/project.private.config.json
+
+# Java 编译产物
+**/target/
+*.jar
+*.class
+
+# IDE 和操作系统本机文件
+.idea/
+*.iml
+.DS_Store
+
+# 运行期数据、日志和服务器私密配置
+planning-assistant-server/uploads/
+logs/
+run/
+conf/server.env
+*.log
+.env
+.env.*

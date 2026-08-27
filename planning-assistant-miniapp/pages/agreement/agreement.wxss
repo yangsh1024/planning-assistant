@@ -1,0 +1,22 @@
+/* pages/agreement/agreement.wxss */
+.agreement-page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.agreement-scroll {
+  flex: 1;
+}
+
+.agreement-content {
+  padding: 40rpx 40rpx 80rpx;
+}
+
+.agreement-text {
+  font-size: 28rpx;
+  color: var(--text-2);
+  line-height: 1.8;
+  white-space: pre-wrap;
+}

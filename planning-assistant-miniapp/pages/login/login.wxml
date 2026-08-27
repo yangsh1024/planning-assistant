@@ -1,0 +1,25 @@
+<!-- pages/login/login.wxml -->
+<view class="login-page">
+  <view class="login-hero">
+    <view class="app-logo">
+      <image class="app-logo-image" src="../../assets/images/avatars/cat-orange.png" mode="aspectFill"></image>
+    </view>
+    <view class="app-name">小猫月度预算账本</view>
+    <view class="app-tagline">轻松管理每月预算，清晰掌握每笔开销</view>
+  </view>
+
+  <view class="login-card">
+    <view class="login-desc">使用微信账号安全登录，数据实时同步</view>
+    <button class="btn-wechat" bindtap="onWechatLogin" loading="{{loading}}" disabled="{{loading}}">
+      <text wx:if="{{!loading}}">微信一键登录</text>
+      <text wx:else>登录中...</text>
+    </button>
+  </view>
+
+  <view class="login-footer">
+    <text class="footer-text">登录即表示同意</text>
+    <text class="footer-link" bindtap="onUserAgreement">用户协议</text>
+    <text class="footer-text">与</text>
+    <text class="footer-link" bindtap="onPrivacyPolicy">隐私政策</text>
+  </view>
+</view>

@@ -1,0 +1,32 @@
+<!-- components/selector/selector.wxml -->
+<view class="selector-wrapper" bindtap="openPicker">
+  <view class="selector-text {{!currentValue ? 'placeholder' : ''}}">
+    {{currentLabel || placeholder}}
+  </view>
+  <view class="selector-arrow">›</view>
+</view>
+
+<view class="picker-modal {{showPicker ? 'visible' : ''}}" catchtap="closePicker">
+  <view class="picker-panel" catchtap="stopProp">
+    <view class="picker-header">
+      <view class="picker-title">{{placeholder || '请选择'}}</view>
+    </view>
+    <scroll-view class="options-list" scroll-y>
+      <view
+        wx:for="{{options}}"
+        wx:key="value"
+        class="option-item {{item.value == currentValue ? 'selected' : ''}}"
+        bindtap="selectOption"
+        data-value="{{item.value}}"
+        data-label="{{item.label}}"
+      >
+        <text class="option-label">{{item.label}}</text>
+        <text wx:if="{{item.value == currentValue}}" class="option-check">✓</text>
+      </view>
+      <view wx:if="{{!options || options.length === 0}}" class="options-empty">暂无选项</view>
+    </scroll-view>
+    <view class="picker-footer">
+      <view class="picker-cancel" bindtap="closePicker">取消</view>
+    </view>
+  </view>
+</view>

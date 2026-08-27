@@ -1,0 +1,47 @@
+{
+  "pages": [
+    "pages/login/login",
+    "pages/home/home",
+    "pages/expense/stats/stats",
+    "pages/expense/add/add",
+    "pages/profile/profile",
+    "pages/plan/edit/edit",
+    "pages/agreement/agreement"
+  ],
+  "tabBar": {
+    "color": "#94A3B8",
+    "selectedColor": "#0EA5E9",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/home/home",
+        "text": "首页",
+        "iconPath": "assets/icons/home.png",
+        "selectedIconPath": "assets/icons/home-active.png"
+      },
+      {
+        "pagePath": "pages/expense/stats/stats",
+        "text": "账单",
+        "iconPath": "assets/icons/bill.png",
+        "selectedIconPath": "assets/icons/bill-active.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "assets/icons/profile.png",
+        "selectedIconPath": "assets/icons/profile-active.png"
+      }
+    ]
+  },
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#0EA5E9",
+    "navigationBarTitleText": "小猫月度预算账本",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#F0F9FF"
+  },
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents",
+  "sitemapLocation": "sitemap.json"
+}

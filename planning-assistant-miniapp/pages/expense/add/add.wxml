@@ -1,0 +1,69 @@
+<!-- pages/expense/add/add.wxml -->
+<view class="add-page">
+  <view class="form-header">
+    <text class="form-title">{{expenseId ? '编辑记录' : '新增开支'}}</text>
+  </view>
+
+  <scroll-view class="form-scroll" scroll-y>
+    <!-- Amount display -->
+    <view class="amount-section">
+      <text class="amount-label">金额（元）</text>
+      <amount-input value="{{amountRaw}}" bind:change="onAmountChange"></amount-input>
+    </view>
+
+    <view class="form-body">
+      <!-- Category -->
+      <view class="form-group">
+        <text class="form-label">科目</text>
+        <selector
+          options="{{categoryOptions}}"
+          value="{{categoryId}}"
+          placeholder="请选择科目"
+          bind:change="onCategoryChange"
+        ></selector>
+        <text wx:if="{{fieldErrors.category}}" class="field-error">{{fieldErrors.category}}</text>
+        <view class="custom-category-row">
+          <input class="custom-category-input" value="{{customCategoryName}}" placeholder="直接输入新科目" maxlength="20" bindinput="onCustomCategoryInput" />
+          <view class="custom-category-btn" bindtap="addCustomCategory">添加</view>
+        </view>
+      </view>
+
+      <!-- Date -->
+      <view class="form-group">
+        <text class="form-label">日期</text>
+        <date-picker
+          mode="date"
+          value="{{expenseDate}}"
+          placeholder="选择消费日期"
+          max="{{today}}"
+          bind:change="onDateChange"
+        ></date-picker>
+        <text wx:if="{{fieldErrors.date}}" class="field-error">{{fieldErrors.date}}</text>
+      </view>
+
+      <!-- Note -->
+      <view class="form-group">
+        <text class="form-label">备注（可选）</text>
+        <textarea
+          class="note-input"
+          value="{{note}}"
+          placeholder="添加备注..."
+          placeholder-class="note-placeholder"
+          maxlength="100"
+          bindinput="onNoteInput"
+          auto-height
+        ></textarea>
+      </view>
+
+      <!-- Submit -->
+      <button class="btn-primary" bindtap="onSave" loading="{{saving}}" disabled="{{saving}}">
+        {{expenseId ? '保存修改' : '记一笔'}}
+      </button>
+      <text wx:if="{{fieldErrors.amount}}" class="field-error amount-error">{{fieldErrors.amount}}</text>
+
+      <button wx:if="{{expenseId}}" class="btn-delete" bindtap="onDelete">删除记录</button>
+    </view>
+
+    <view class="scroll-padding"></view>
+  </scroll-view>
+</view>

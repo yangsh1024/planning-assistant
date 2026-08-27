@@ -1,0 +1,142 @@
+/* components/selector/selector.wxss */
+.selector-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border: 1rpx solid var(--border);
+  border-radius: 20rpx;
+  min-height: 104rpx;
+  box-sizing: border-box;
+  padding: 0 28rpx;
+}
+
+.selector-text {
+  display: flex;
+  align-items: center;
+  font-size: 28rpx;
+  color: var(--text);
+  line-height: 1;
+}
+
+.selector-text.placeholder {
+  color: var(--text-3);
+}
+
+.selector-arrow {
+  display: flex;
+  align-items: center;
+  color: var(--text-3);
+  font-size: 28rpx;
+  line-height: 1;
+}
+
+/* Modal */
+.picker-modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(12, 26, 43, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.picker-modal.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.picker-panel {
+  width: 100%;
+  background: var(--surface);
+  border-radius: 32rpx 32rpx 0 0;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.picker-header {
+  padding: 32rpx;
+  border-bottom: 1rpx solid var(--border-2);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.picker-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.options-list {
+  flex: 1;
+  max-height: 50vh;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 32rpx;
+  border-bottom: 1rpx solid var(--border-2);
+}
+
+.option-item:last-child {
+  border-bottom: none;
+}
+
+.option-item.selected {
+  background: var(--accent-bg);
+}
+
+.option-item:active {
+  background: var(--surface-2);
+}
+
+.option-label {
+  font-size: 30rpx;
+  color: var(--text);
+}
+
+.option-item.selected .option-label {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.option-check {
+  font-size: 28rpx;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.options-empty {
+  padding: 48rpx;
+  text-align: center;
+  font-size: 28rpx;
+  color: var(--text-3);
+}
+
+.picker-footer {
+  padding: 24rpx 32rpx;
+  border-top: 1rpx solid var(--border-2);
+  flex-shrink: 0;
+}
+
+.picker-cancel {
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20rpx;
+  font-size: 30rpx;
+  color: var(--text-3);
+  background: var(--surface-2);
+}
+
+.picker-cancel:active {
+  opacity: 0.8;
+}

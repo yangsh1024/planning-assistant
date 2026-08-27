@@ -1,0 +1,96 @@
+<!-- pages/plan/edit/edit.wxml -->
+<view class="edit-page">
+  <view class="page-header">
+    <date-picker id="plan-month-picker" mode="month" variant="header-center" value="{{currentYearMonth}}" max="{{maxYearMonth}}" bind:change="onYearMonthChange"></date-picker>
+  </view>
+
+  <scroll-view class="edit-scroll" scroll-y>
+    <!-- Loading / error state -->
+    <view wx:if="{{pageStatus === 'loading'}}" class="state-loading">
+      <text class="state-text">加载中…</text>
+    </view>
+
+    <view wx:if="{{pageStatus === 'error'}}" class="state-error">
+      <text class="state-text">{{pageMessage}}</text>
+      <view class="btn-retry" bindtap="loadPlan">重试</view>
+    </view>
+
+    <!-- Inherit hint banner -->
+    <view class="inherit-banner" wx:if="{{pageStatus === 'ready' && inherited}}">
+      <text class="inherit-text">已继承上月预算，可直接修改后保存</text>
+    </view>
+
+    <!-- Items -->
+    <view class="items-section" wx:if="{{pageStatus === 'ready'}}">
+      <view class="section-title">预算科目</view>
+
+      <view
+        class="item-row {{draggingIndex === index ? 'item-row-dragging' : ''}}"
+        wx:for="{{items}}"
+        wx:key="categoryId"
+        data-index="{{index}}"
+        bindlongpress="onDragStart"
+        catchtouchmove="onDragMove"
+        bindtouchend="onDragEnd"
+        bindtouchcancel="onDragCancel"
+        style="transform: translateY({{item.dragShift || 0}}px);"
+      >
+        <view class="drag-handle">☰</view>
+        <text class="item-name">{{item.categoryName}}</text>
+        <view class="item-amount-wrap">
+          <text class="item-currency">¥</text>
+          <input
+            class="item-input"
+            type="digit"
+            value="{{item.amount}}"
+            placeholder="0.00"
+            data-index="{{index}}"
+            bindinput="onAmountInput"
+          />
+          <view class="item-delete" bindtap="removeItem" data-index="{{index}}">×</view>
+        </view>
+        <text wx:if="{{item.error}}" class="item-error">{{item.error}}</text>
+      </view>
+
+      <!-- Empty hint -->
+      <view class="empty-items" wx:if="{{items.length === 0}}">
+        <text class="empty-text">还没有科目，点击下方添加</text>
+      </view>
+    </view>
+
+    <!-- Add category -->
+    <view class="add-section" wx:if="{{pageStatus === 'ready'}}">
+      <view class="section-title">添加科目</view>
+      <view class="category-chips">
+        <view
+          class="chip {{addedIds[item.categoryId] ? 'chip-added' : ''}}"
+          wx:for="{{categories}}"
+          wx:key="categoryId"
+          bindtap="addItem"
+          data-cat="{{item}}"
+        >
+          {{item.name}}{{addedIds[item.categoryId] ? ' ✓' : ''}}
+        </view>
+      </view>
+
+      <!-- Custom category input -->
+      <view class="custom-cat-row">
+        <input
+          class="custom-cat-input"
+          placeholder="自定义科目名称"
+          value="{{customCatName}}"
+          bindinput="onCustomCatInput"
+          maxlength="20"
+        />
+        <view class="custom-cat-btn {{customCatName ? '' : 'custom-cat-btn-disabled'}}" bindtap="addCustomCategory">添加</view>
+      </view>
+    </view>
+
+    <view class="scroll-padding"></view>
+  </scroll-view>
+
+  <!-- Save button -->
+  <view class="footer" wx:if="{{pageStatus === 'ready'}}">
+    <button class="btn-save" bindtap="onSave" loading="{{saving}}" disabled="{{saving}}">保存预算</button>
+  </view>
+</view>

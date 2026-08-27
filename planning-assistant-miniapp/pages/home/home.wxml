@@ -1,0 +1,101 @@
+<!-- pages/home/home.wxml -->
+<view class="home-page">
+  <!-- Header -->
+  <view class="home-header">
+    <view class="header-greeting">{{greeting}}，{{nickname || '朋友'}} 👋</view>
+    <view class="header-month-row">
+      <text class="header-month">本月概览</text>
+      <date-picker mode="month" variant="header" value="{{currentYearMonth}}" max="{{maxYearMonth}}" bind:change="onYearMonthChange"></date-picker>
+    </view>
+  </view>
+
+  <scroll-view class="home-scroll" scroll-y enhanced refresher-enabled bindrefresherrefresh="onRefresh" refresher-triggered="{{refreshing}}">
+
+    <!-- Summary card -->
+    <view class="summary-card" wx:if="{{summary}}">
+      <view class="summary-card-header">
+        <text class="summary-label">{{pageStatus === 'no-plan' ? '本月尚未设置预算' : '本月预算执行'}}</text>
+        <text class="summary-edit-btn" bindtap="onEditPlan">编辑预算</text>
+      </view>
+      <view class="summary-main">
+        <text class="summary-actual">{{summary.totalActual}}</text>
+        <text class="summary-sep"> / </text>
+        <text class="summary-budget">{{summary.totalBudget}}</text>
+        <text class="summary-unit"> 元</text>
+      </view>
+      <view class="summary-progress">
+        <view class="progress-bar">
+          <view class="progress-fill {{summary.rate > 100 ? 'danger' : summary.rate > 80 ? 'warning' : ''}}" style="width: {{summary.rate > 100 ? 100 : summary.rate}}%"></view>
+        </view>
+      </view>
+      <view class="summary-stats">
+        <view class="stat-item">
+          <text class="stat-label">剩余</text>
+          <text class="stat-value {{summary.isOverBudget ? 'text-danger' : ''}}">¥{{summary.totalRemaining}}</text>
+        </view>
+        <view class="stat-item">
+          <text class="stat-label">执行率</text>
+          <text class="stat-value">{{summary.rate}}%</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- No plan state -->
+    <view class="no-plan-card" wx:if="{{pageStatus === 'no-plan'}}">
+      <text class="no-plan-icon">📋</text>
+      <text class="no-plan-title">本月还没有预算规划</text>
+      <text class="no-plan-desc">{{summary && summary.totalActual !== '0.00' ? '已记录支出 ¥' + summary.totalActual + '，设置预算后可追踪执行情况' : '设置预算后，可以追踪每项支出的执行情况'}}</text>
+      <view class="btn-set-plan" bindtap="onEditPlan">设置本月预算</view>
+    </view>
+
+    <!-- State view for loading/error -->
+    <view wx:if="{{pageStatus === 'loading'}}" class="home-skeleton" aria-label="加载中">
+      <view class="skeleton-card">
+        <view class="skeleton-line skeleton-title"></view>
+        <view class="skeleton-line skeleton-number"></view>
+        <view class="skeleton-line skeleton-progress"></view>
+        <view class="skeleton-row"><view class="skeleton-line skeleton-stat"></view><view class="skeleton-line skeleton-stat"></view></view>
+      </view>
+      <view class="skeleton-card skeleton-list-card" wx:for="{{[1, 2, 3]}}" wx:key="*this">
+        <view class="skeleton-row"><view class="skeleton-line skeleton-name"></view><view class="skeleton-line skeleton-value"></view></view>
+        <view class="skeleton-line skeleton-progress"></view>
+      </view>
+    </view>
+    <state-view wx:if="{{pageStatus === 'error'}}" status="error" message="{{pageMessage}}" bind:retry="loadData"></state-view>
+
+    <!-- Category list -->
+    <view class="categories-section" wx:if="{{summary && summary.items && summary.items.length > 0}}">
+      <view class="section-header">
+        <text class="section-title">科目详情</text>
+        <text class="section-hint" bindtap="onViewDetails">点击查看明细 ›</text>
+      </view>
+
+      <view
+        class="category-card"
+        wx:for="{{summary.items}}"
+        wx:key="categoryId"
+      >
+        <view class="cat-header">
+          <text class="cat-name">{{item.categoryName}}</text>
+          <text class="cat-amount {{item.isOverBudget ? 'over' : 'normal'}}">¥{{item.actual}} / ¥{{item.budget}}</text>
+        </view>
+        <view class="cat-progress">
+          <view class="progress-bar">
+            <view class="progress-fill {{item.rate > 100 ? 'danger' : item.rate > 80 ? 'warning' : ''}}" style="width: {{item.rate > 100 ? 100 : item.rate}}%"></view>
+          </view>
+        </view>
+        <view class="cat-footer">
+          <text class="cat-remaining {{item.isOverBudget ? 'text-danger' : 'text-muted'}}">
+            {{item.isOverBudget ? '超支 ¥' + item.overAmount : '剩余 ¥' + item.remaining}}
+          </text>
+          <text class="cat-rate text-muted">{{item.rate}}%</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="scroll-padding"></view>
+  </scroll-view>
+
+  <!-- FAB -->
+  <view class="fab" bindtap="onAddExpense">+</view>
+</view>

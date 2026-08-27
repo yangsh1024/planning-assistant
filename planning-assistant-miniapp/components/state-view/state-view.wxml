@@ -1,0 +1,23 @@
+<!-- components/state-view/state-view.wxml -->
+<view class="state-view" wx:if="{{status !== 'done'}}">
+  <!-- Loading state -->
+  <view wx:if="{{status === 'loading'}}" class="state-loading">
+    <view class="loading-spinner">
+      <view class="spinner-ring"></view>
+    </view>
+    <text class="state-message">{{message || '加载中...'}}</text>
+  </view>
+
+  <!-- Empty state -->
+  <view wx:if="{{status === 'empty'}}" class="state-empty">
+    <text class="state-icon">📭</text>
+    <text class="state-message">{{message || '暂无数据'}}</text>
+  </view>
+
+  <!-- Error state -->
+  <view wx:if="{{status === 'error'}}" class="state-error">
+    <text class="state-icon">⚠️</text>
+    <text class="state-message">{{message || '加载失败，请稍后重试'}}</text>
+    <view wx:if="{{showRetry}}" class="retry-btn" bindtap="onRetry">重试</view>
+  </view>
+</view>

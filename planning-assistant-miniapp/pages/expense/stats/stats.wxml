@@ -1,0 +1,131 @@
+<!-- pages/expense/stats/stats.wxml -->
+<view class="stats-page">
+  <!-- Header -->
+  <view class="page-header">
+    <view class="month-row">
+      <date-picker mode="month" variant="toolbar-center" value="{{currentYearMonth}}" max="{{maxYearMonth}}" bind:change="onYearMonthChange"></date-picker>
+    </view>
+
+    <!-- View toggle: 统计 / 明细 -->
+    <view class="view-toggle">
+      <view class="toggle-btn {{activeTab === 'stats' ? 'active' : ''}}" bindtap="switchTab" data-tab="stats">统计</view>
+      <view class="toggle-btn {{activeTab === 'list' ? 'active' : ''}}" bindtap="switchTab" data-tab="list">明细</view>
+    </view>
+  </view>
+
+  <!-- 统计 tab -->
+  <scroll-view
+    wx:if="{{activeTab === 'stats'}}"
+    class="stats-scroll"
+    scroll-y
+    enhanced
+    refresher-enabled
+    bindrefresherrefresh="onRefresh"
+    refresher-triggered="{{refreshing}}"
+  >
+    <state-view wx:if="{{pageStatus !== 'done'}}" status="{{pageStatus}}" message="{{pageMessage}}" bind:retry="loadData"></state-view>
+
+    <view wx:if="{{pageStatus === 'done'}}">
+      <view wx:if="{{budgetSummary}}" class="budget-progress-card {{budgetSummary.rate > 100 ? 'over-budget' : ''}}">
+        <view class="budget-progress-header"><text>预算使用率</text><text>{{budgetSummary.rate}}%</text></view>
+        <view class="progress-bar"><view class="progress-fill {{budgetSummary.rate > 100 ? 'danger' : ''}}" style="width: {{budgetSummary.rate > 100 ? 100 : budgetSummary.rate}}%"></view></view>
+        <text class="budget-progress-value">¥{{budgetSummary.totalActual}} / ¥{{budgetSummary.totalBudget}}</text>
+      </view>
+      <!-- Summary strip -->
+      <view class="exec-strip">
+        <view class="exec-item">
+          <text class="exec-label">总支出</text>
+          <text class="exec-value spent">¥{{grandTotal}}</text>
+        </view>
+        <view class="exec-item">
+          <text class="exec-label">笔数</text>
+          <text class="exec-value">{{totalCount}}笔</text>
+        </view>
+        <view class="exec-item">
+          <text class="exec-label">日均</text>
+          <text class="exec-value">¥{{dailyAvg}}</text>
+        </view>
+      </view>
+
+      <!-- Pie chart card -->
+      <view class="chart-card" wx:if="{{statItems.length > 0}}">
+        <view class="chart-title">支出分布</view>
+        <canvas
+          type="2d"
+          id="pieChart"
+          class="pie-canvas"
+          style="width: 280rpx; height: 280rpx;"
+        ></canvas>
+        <!-- Legend -->
+        <view class="legend-list">
+          <view class="legend-item" wx:for="{{statItems}}" wx:key="categoryId">
+            <view class="legend-left">
+              <view class="legend-dot" style="background: {{item.color}}"></view>
+              <text class="legend-name">{{item.categoryName}}</text>
+            </view>
+            <view class="legend-right">
+              <text class="legend-value">¥{{item.total}}</text>
+              <text class="legend-percent">{{item.count}}笔 · {{item.percentage}}%</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <state-view wx:if="{{statItems.length === 0}}" status="empty" message="本月暂无支出记录"></state-view>
+    </view>
+
+    <view class="scroll-padding"></view>
+  </scroll-view>
+
+  <!-- 明细 tab -->
+  <scroll-view
+    wx:if="{{activeTab === 'list'}}"
+    class="stats-scroll"
+    scroll-y
+    enhanced
+    refresher-enabled
+    bindrefresherrefresh="onRefresh"
+    refresher-triggered="{{refreshing}}"
+    bindscrolltolower="onLoadMore"
+  >
+    <view class="filter-row">
+      <text class="filter-label">科目</text>
+      <picker mode="selector" range="{{filterOptions}}" range-key="label" value="{{filterIndex}}" bindchange="onCategoryFilterChange">
+        <view class="filter-picker">{{filterLabel}} ▾</view>
+      </picker>
+    </view>
+    <state-view wx:if="{{listStatus !== 'done' && expenseGroups.length === 0}}" status="{{listStatus}}" message="{{listMessage}}" bind:retry="loadList"></state-view>
+
+    <view wx:if="{{expenseGroups.length > 0}}">
+      <view class="date-group" wx:for="{{expenseGroups}}" wx:key="date">
+        <view class="date-header">
+          <text class="date-label">{{item.dateLabel}}</text>
+          <view class="date-line"></view>
+          <text class="date-total">¥{{item.dayTotal}}</text>
+        </view>
+        <view
+          class="expense-item"
+          wx:for="{{item.list}}"
+          wx:for-item="expense"
+          wx:key="expenseId"
+          bindtap="onExpenseTap"
+          data-expense="{{expense}}"
+        >
+          <view class="expense-info">
+            <text class="expense-category">{{expense.categoryName}}</text>
+            <text wx:if="{{expense.note}}" class="expense-note">{{expense.note}}</text>
+            <text class="expense-date">{{expense.expenseDate}}</text>
+          </view>
+          <text class="expense-amount">¥{{expense.amount}}</text>
+        </view>
+      </view>
+
+      <view wx:if="{{loadingMore}}" class="load-more-tip">加载中...</view>
+      <view wx:if="{{noMore && expenseGroups.length > 0}}" class="load-more-tip">— 没有更多了 —</view>
+    </view>
+
+    <state-view wx:if="{{expenseGroups.length === 0 && listStatus === 'done'}}" status="empty" message="本月暂无支出记录"></state-view>
+
+    <view class="scroll-padding"></view>
+  </scroll-view>
+</view>

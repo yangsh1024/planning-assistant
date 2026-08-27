@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "预算规划",
+  "usingComponents": {
+    "date-picker": "/components/date-picker/date-picker"
+  }
+}

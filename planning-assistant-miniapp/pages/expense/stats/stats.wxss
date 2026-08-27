@@ -1,0 +1,280 @@
+/* pages/expense/stats/stats.wxss */
+page {
+  background-color: var(--bg);
+}
+
+.stats-page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.page-header {
+  background: var(--surface);
+  padding: 20rpx 32rpx 0;
+  border-bottom: 1rpx solid var(--border-2);
+  flex-shrink: 0;
+}
+
+.month-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 20rpx;
+}
+
+.budget-progress-card {
+  margin: 24rpx 24rpx 0;
+  padding: 24rpx 28rpx;
+  border-radius: 20rpx;
+  background: var(--surface);
+  border: 1rpx solid var(--border-2);
+}
+
+.budget-progress-card.over-budget { border-color: var(--danger); }
+.budget-progress-header { display: flex; justify-content: space-between; margin-bottom: 16rpx; font-size: 26rpx; color: var(--text); }
+.budget-progress-value { display: block; margin-top: 12rpx; font-size: 24rpx; color: var(--text-3); }
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 24rpx 0;
+}
+.filter-label { font-size: 24rpx; color: var(--text-3); }
+.filter-picker { padding: 12rpx 20rpx; border-radius: 16rpx; background: var(--surface); border: 1rpx solid var(--border); font-size: 24rpx; color: var(--text); }
+
+/* Tab toggle */
+.view-toggle {
+  display: flex;
+  border-top: 1rpx solid var(--border-2);
+}
+
+.toggle-btn {
+  flex: 1;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  color: var(--text-3);
+  position: relative;
+}
+
+.toggle-btn.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.toggle-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 25%;
+  right: 25%;
+  height: 4rpx;
+  background: var(--accent);
+  border-radius: 2rpx;
+}
+
+/* Scroll area */
+.stats-scroll {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Execution strip */
+.exec-strip {
+  display: flex;
+  background: var(--accent-bg);
+  border-radius: 20rpx;
+  margin: 24rpx 24rpx 0;
+  padding: 24rpx 32rpx;
+}
+
+.exec-item {
+  flex: 1;
+  text-align: center;
+}
+
+.exec-label {
+  display: block;
+  font-size: 22rpx;
+  color: var(--text-3);
+  margin-bottom: 6rpx;
+}
+
+.exec-value {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.exec-value.spent {
+  color: var(--expense);
+}
+
+.exec-value.remain {
+  color: var(--success);
+}
+
+/* Chart card */
+.chart-card {
+  background: var(--surface);
+  border: 1rpx solid var(--border-2);
+  border-radius: 24rpx;
+  padding: 32rpx;
+  margin: 24rpx 24rpx 0;
+}
+
+.chart-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 24rpx;
+}
+
+.pie-canvas {
+  display: block;
+  margin: 0 auto 32rpx;
+}
+
+/* Legend */
+.legend-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.legend-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.legend-left {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.legend-dot {
+  width: 20rpx;
+  height: 20rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-name {
+  font-size: 26rpx;
+  color: var(--text);
+}
+
+.legend-right {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.legend-value {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.legend-percent {
+  font-size: 22rpx;
+  color: var(--text-3);
+}
+
+/* Expense list (明细 tab) */
+.date-group {
+  padding: 24rpx 24rpx 0;
+}
+
+.date-header {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 12rpx;
+}
+
+.date-label {
+  font-size: 24rpx;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.date-line {
+  flex: 1;
+  height: 1rpx;
+  background: var(--border-2);
+}
+
+.date-total {
+  font-size: 24rpx;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.expense-item {
+  background: var(--surface);
+  border: 1rpx solid var(--border-2);
+  border-radius: 16rpx;
+  padding: 24rpx 28rpx;
+  margin-bottom: 12rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.expense-item:active {
+  background: var(--accent-bg);
+}
+
+.expense-info {
+  flex: 1;
+  margin-right: 16rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.expense-category {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.expense-note {
+  display: block;
+  font-size: 24rpx;
+  color: var(--text-3);
+}
+
+.expense-date {
+  display: block;
+  font-size: 22rpx;
+  color: var(--text-3);
+}
+
+.expense-amount {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: var(--expense);
+}
+
+/* Load more */
+.load-more-tip {
+  text-align: center;
+  padding: 24rpx;
+  font-size: 24rpx;
+  color: var(--text-3);
+}
+
+.scroll-padding {
+  height: 120rpx;
+}

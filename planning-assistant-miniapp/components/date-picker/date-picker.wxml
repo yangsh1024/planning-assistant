@@ -1,0 +1,71 @@
+<!-- components/date-picker/date-picker.wxml -->
+<view class="date-picker-wrapper date-picker-{{variant}}" bindtap="openPicker">
+  <view class="date-text {{!currentValue ? 'placeholder' : ''}}">
+    {{currentValue || placeholder}}
+  </view>
+  <view class="picker-arrow">▾</view>
+</view>
+
+<view class="picker-modal {{showPicker ? 'visible' : ''}}" catchtap="closePicker">
+  <view class="picker-panel" catchtap="stopProp">
+    <view class="picker-header">
+      <view class="picker-title">{{mode === 'month' ? '选择年月' : '选择日期'}}</view>
+    </view>
+
+    <!-- Year-Month Mode -->
+    <view wx:if="{{mode === 'month'}}" class="ym-selector">
+      <view class="ym-row">
+        <view class="ym-btn" bindtap="prevYear">‹</view>
+        <text class="ym-year">{{tempYear}}</text>
+        <view class="ym-btn" bindtap="nextYear">›</view>
+      </view>
+      <view class="ym-months">
+        <view
+          wx:for="{{months}}"
+          wx:key="index"
+          class="ym-month-item {{item.value === tempMonth ? 'selected' : ''}}"
+          bindtap="selectMonth"
+          data-month="{{item.value}}"
+        >{{item.label}}</view>
+      </view>
+    </view>
+
+    <!-- Full Date Mode -->
+    <view wx:if="{{mode === 'date'}}" class="date-selector">
+      <!-- Year row -->
+      <view class="ym-row">
+        <view class="ym-btn" bindtap="prevYear">‹</view>
+        <text class="ym-year">{{tempYear}}</text>
+        <view class="ym-btn" bindtap="nextYear">›</view>
+      </view>
+      <!-- Month row -->
+      <view class="ym-months">
+        <view
+          wx:for="{{months}}"
+          wx:key="index"
+          class="ym-month-item {{item.value === tempMonth ? 'selected' : ''}}"
+          bindtap="selectDateMonth"
+          data-month="{{item.value}}"
+        >{{item.label}}</view>
+      </view>
+      <!-- Day grid -->
+      <view class="day-grid">
+        <view class="day-header" wx:for="{{dayHeaders}}" wx:key="index">{{item}}</view>
+        <view
+          wx:for="{{dayItems}}"
+          wx:key="index"
+          class="day-cell {{item.empty ? 'empty' : ''}} {{item.day === tempDay && !item.empty ? 'selected' : ''}}"
+          bindtap="selectDay"
+          data-day="{{item.day}}"
+        >
+          <text wx:if="{{!item.empty}}">{{item.day}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="picker-footer">
+      <view class="picker-cancel" bindtap="closePicker">取消</view>
+      <view class="picker-confirm" bindtap="confirmPick">确定</view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,80 @@
+<!-- pages/profile/profile.wxml -->
+<view class="profile-page">
+  <!-- Hero -->
+  <view class="profile-hero" bindtap="openEditPanel">
+    <view class="avatar-wrapper">
+      <image class="avatar-image" src="{{avatarSrc}}" mode="aspectFill"></image>
+    </view>
+    <text class="profile-name">{{userInfo.nickname || '加载中...'}}</text>
+    <text class="profile-sub">注册于 {{joinDate}}</text>
+  </view>
+
+  <scroll-view class="profile-scroll" scroll-y>
+    <!-- Data section -->
+    <view class="menu-section">
+      <text class="section-label">数据</text>
+      <view class="menu-group">
+        <view class="menu-item" bindtap="goToStats">
+          <view class="menu-left">
+            <view class="menu-icon icon-blue">📊</view>
+            <text class="menu-label">月度报表</text>
+          </view>
+          <text class="menu-arrow">›</text>
+        </view>
+        <view class="menu-item" bindtap="goToBudget">
+          <view class="menu-left">
+            <view class="menu-icon icon-green">📅</view>
+            <text class="menu-label">预算设置</text>
+          </view>
+          <text class="menu-arrow">›</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="menu-section">
+      <text class="section-label">帮助</text>
+      <view class="menu-group">
+        <view class="menu-item" bindtap="openContact">
+          <view class="menu-left">
+            <view class="menu-icon icon-orange">💬</view>
+            <text class="menu-label">联系客服</text>
+          </view>
+          <text class="menu-arrow">›</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="scroll-padding"></view>
+  </scroll-view>
+
+  <view wx:if="{{editVisible}}" class="modal-mask" catchtap="closeEditPanel">
+    <view class="profile-modal" catchtap="stopModalPropagation">
+      <text class="modal-title">编辑资料</text>
+      <text class="modal-desc">选择小猫头像，点击昵称可快捷填入</text>
+      <view class="avatar-picker">
+        <text class="profile-field-label">头像</text>
+        <view class="avatar-options">
+          <view wx:for="{{avatarOptions}}" wx:key="key" class="avatar-option {{editingAvatar === item.key ? 'avatar-option-selected' : ''}}" data-key="{{item.key}}" bindtap="selectAvatar">
+            <image class="avatar-option-image" src="{{item.src}}" mode="aspectFill"></image>
+            <text class="avatar-option-label">{{item.label}}</text>
+          </view>
+        </view>
+      </view>
+      <view class="profile-field">
+        <text class="profile-field-label">昵称</text>
+        <input class="profile-input" type="nickname" value="{{editingNickname}}" maxlength="20" placeholder="请输入昵称" bindinput="onNicknameInput" />
+      </view>
+      <button class="modal-primary" bindtap="saveProfile" loading="{{savingProfile}}">保存资料</button>
+      <view class="modal-cancel" bindtap="closeEditPanel">取消</view>
+    </view>
+  </view>
+
+  <view wx:if="{{contactVisible}}" class="modal-mask" catchtap="closeContact">
+    <view class="profile-modal contact-modal" catchtap="stopModalPropagation">
+      <text class="modal-title">联系客服</text>
+      <image class="contact-qr" src="../../assets/images/customer-service-qr.jpg" mode="aspectFit" show-menu-by-longpress></image>
+      <text class="contact-text">扫码关注公众号，可在公众号内反馈问题。</text>
+      <view class="modal-cancel" bindtap="closeContact">知道了</view>
+    </view>
+  </view>
+</view>

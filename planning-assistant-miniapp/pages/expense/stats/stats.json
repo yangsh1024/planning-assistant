@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "账单",
+  "usingComponents": {
+    "state-view": "/components/state-view/state-view",
+    "date-picker": "/components/date-picker/date-picker"
+  }
+}
