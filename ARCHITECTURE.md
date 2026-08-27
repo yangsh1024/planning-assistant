@@ -41,7 +41,7 @@
 - 不单独部署 Spring Cloud Gateway，由 Nginx + Spring Security 组合替代，节省单机资源
 - Agent 合并进单体应用，通过 Spring Bean 注入调用业务 Service，不直连数据库；账本写操作必须经确认动作执行
 - 权限由 Spring SecurityContext 统一控制，小程序 Bearer 与 Web Cookie 使用不同 token purpose 和角色
-- 个人主体小程序不使用 `web-view`、URL Link 或 URL Scheme；电脑端由小程序确认，手机端复制短时一次性链接
+- 个人主体小程序不使用 `web-view`、URL Link 或 URL Scheme；电脑端使用小程序码确认登录，手机端通过小程序复制短时一次性登录链接
 - **业务规则、数据模型及接口定义以各子模块 ARCHITECTURE.md 为准**，本文件仅作整体概览
 
 ## 子模块文档

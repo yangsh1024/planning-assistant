@@ -39,6 +39,36 @@ components:
       in: cookie
       name: WEB_AUTH
 
+  parameters:
+    WebLoginRequestId:
+      name: requestId
+      in: path
+      required: true
+      description: 短时网页登录请求标识
+      schema:
+        type: string
+    AgentSessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    AgentActionId:
+      name: actionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CsrfToken:
+      name: X-CSRF-TOKEN
+      in: header
+      required: true
+      description: 须与同域 XSRF-TOKEN Cookie 一致
+      schema:
+        type: string
+
   schemas:
     # ─── 通用响应 ────────────────────────────────────────────────
     Result:
@@ -425,6 +455,7 @@ components:
           properties: { mode: { enum: [FALLBACK_CODE] }, qrCodeUrl: { nullable: true } }
     WebLoginStatus:
       type: object
+      required: [requestId, deviceLabel, status, expiresAt]
       properties:
         requestId: { type: string }
         deviceLabel: { type: string }
@@ -461,12 +492,14 @@ components:
         retryUserMessageId: { type: string, format: uuid, nullable: true, description: 失败重试时复用的原 USER 消息；必须属于同一用户与会话且正文一致 }
     AgentSession:
       type: object
+      required: [sessionId, title, updatedAt]
       properties:
         sessionId: { type: string, format: uuid }
         title: { type: string }
         updatedAt: { type: string, format: date-time }
     AgentMessage:
       type: object
+      required: [messageId, role, content, status, createdAt]
       properties:
         messageId: { type: string, format: uuid }
         role: { type: string, enum: [USER, ASSISTANT] }
@@ -489,86 +522,245 @@ components:
 paths:
   /web-auth/requests:
     post:
+      tags: [Web 登录]
       security: []
       summary: 创建电脑端网页登录请求（动态码或固定码兜底）
+      description: |
+        创建 2 分钟有效、单次使用的网页登录请求。动态小程序码可用时返回 DYNAMIC_QR 模式；
+        不可用时返回 FALLBACK_CODE 模式，浏览器同时展示固定小程序码和六位登录码。
       responses:
-        '200': { description: 成功；data 为 WebLoginRequest，动态码与固定码字段互斥 }
+        '200':
+          description: 成功；动态码与固定码字段互斥
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Result'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/WebLoginRequest' }
         '429': { description: 创建过于频繁 }
         '503': { description: 固定码配置缺失或暂时无法分配登录码 }
   /web-auth/requests/{requestId}/status:
     get:
+      tags: [Web 登录]
       security: []
-      parameters: [{ name: requestId, in: path, required: true, schema: { type: string } }, { name: X-Web-Login-Proof, in: header, required: true, schema: { type: string } }]
+      summary: 浏览器查询登录请求状态
+      parameters: [{ $ref: '#/components/parameters/WebLoginRequestId' }, { name: X-Web-Login-Proof, in: header, required: true, schema: { type: string } }]
       responses:
-        '200': { description: data 为 WebLoginStatus }
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Result'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/WebLoginStatus' }
         '404': { description: 请求不存在或浏览器凭据错误 }
   /web-auth/requests/{requestId}/qr:
     get:
+      tags: [Web 登录]
       security: []
       summary: 获取动态小程序码
-      parameters: [{ name: requestId, in: path, required: true, schema: { type: string } }]
+      parameters: [{ $ref: '#/components/parameters/WebLoginRequestId' }]
       responses: { '200': { description: PNG 图片, content: { image/png: { schema: { type: string, format: binary } } } } }
   /web-auth/requests/{requestId}/preview:
     get:
+      tags: [Web 登录]
       summary: 小程序预览登录请求
-      parameters: [{ name: requestId, in: path, required: true, schema: { type: string } }]
-      responses: { '200': { description: data 为 WebLoginStatus }, '404': { description: 请求不存在或已不可确认 } }
+      parameters: [{ $ref: '#/components/parameters/WebLoginRequestId' }]
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Result'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/WebLoginStatus' }
+        '404': { description: 请求不存在或已不可确认 }
   /web-auth/requests/{requestId}/approve:
     post:
-      parameters: [{ name: requestId, in: path, required: true, schema: { type: string } }]
-      responses: { '200': { description: 已确认 } }
+      tags: [Web 登录]
+      summary: 小程序确认网页登录
+      parameters: [{ $ref: '#/components/parameters/WebLoginRequestId' }]
+      responses:
+        '200':
+          description: 已确认
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
   /web-auth/requests/{requestId}/reject:
     post:
-      parameters: [{ name: requestId, in: path, required: true, schema: { type: string } }]
-      responses: { '200': { description: 已拒绝 } }
+      tags: [Web 登录]
+      summary: 小程序拒绝网页登录
+      parameters: [{ $ref: '#/components/parameters/WebLoginRequestId' }]
+      responses:
+        '200':
+          description: 已拒绝
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
   /web-auth/fallback/resolve:
     post:
+      tags: [Web 登录]
       summary: 小程序通过六位码解析登录请求
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/FallbackCodeRequest' } } } }
-      responses: { '200': { description: data 为 WebLoginStatus }, '404': { description: 登录码不存在或已失效 }, '429': { description: 尝试过于频繁 } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Result'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/WebLoginStatus' }
+        '404': { description: 登录码不存在或已失效 }
+        '429': { description: 尝试过于频繁 }
   /web-auth/miniapp-links:
     post:
+      tags: [Web 登录]
       summary: 小程序生成一次性 Web 登录链接
-      responses: { '200': { description: data 为 SsoLink }, '401': { description: 小程序身份无效 } }
+      description: 仅供已登录小程序调用；用户将结果复制后自行在浏览器粘贴打开。
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Result'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/SsoLink' }
+        '401': { description: 小程序身份无效 }
   /web-auth/sso/exchange:
     post:
+      tags: [Web 登录]
       security: []
       summary: 一次性短票据交换 Web Cookie
+      description: Web 前端从 URL fragment 读取 ticket 后以 POST 提交，成功后立即清除 fragment。
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SsoExchangeRequest' } } } }
-      responses: { '200': { description: 设置 HttpOnly WEB_AUTH 和可读 XSRF-TOKEN Cookie }, '409': { description: 票据过期或已使用 } }
+      responses:
+        '200':
+          description: 设置 HttpOnly WEB_AUTH 和可读 XSRF-TOKEN Cookie
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+        '409': { description: 票据过期或已使用 }
   /web-auth/requests/{requestId}/exchange:
     post:
+      tags: [Web 登录]
       security: []
-      parameters: [{ name: requestId, in: path, required: true, schema: { type: string } }]
+      summary: 浏览器交换 Web 登录态
+      description: 仅在登录请求已由小程序确认时成功；后续 Cookie 鉴权的非安全请求必须提交 CSRF Token。
+      parameters: [{ $ref: '#/components/parameters/WebLoginRequestId' }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/BrowserProofRequest' } } } }
-      responses: { '200': { description: 设置 HttpOnly WEB_AUTH 和可读 XSRF-TOKEN Cookie }, '401': { description: 浏览器凭据错误 }, '409': { description: 请求未确认、过期、拒绝或已使用 } }
+      responses:
+        '200':
+          description: 设置 HttpOnly WEB_AUTH 和可读 XSRF-TOKEN Cookie
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+        '401': { description: 浏览器凭据错误 }
+        '409': { description: 请求未确认、过期、拒绝或已使用 }
   /agent/chat:
     post:
+      tags: [Agent]
       security: [{ cookieAuth: [] }]
       summary: 发送 Agent 消息并接收 SSE
       description: 仅发送 message_start、delta、action_required、done、error；不发送推理内容或内部工具事件。429、总超时和断流以 error 事件或对应 HTTP 状态表示，均可重试。
-      parameters: [{ name: X-CSRF-TOKEN, in: header, required: true, schema: { type: string } }]
+      parameters: [{ $ref: '#/components/parameters/CsrfToken' }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AgentChatRequest' } } } }
-      responses: { '200': { description: text/event-stream }, '403': { description: CSRF Token 缺失或错误 }, '429': { description: 用户分钟限流 }, '503': { description: DeepSeek 不可用 } }
+      responses:
+        '200':
+          description: SSE 流
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '403': { description: CSRF Token 缺失或错误 }
+        '429': { description: 用户分钟限流 }
+        '503': { description: DeepSeek 不可用 }
   /agent/sessions:
     get:
+      tags: [Agent]
       security: [{ cookieAuth: [] }]
-      responses: { '200': { description: 'Result<AgentSession[]>' } }
+      summary: 获取当前用户的历史会话
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Result'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/AgentSession' }
   /agent/sessions/{sessionId}/messages:
     get:
+      tags: [Agent]
       security: [{ cookieAuth: [] }]
-      parameters: [{ name: sessionId, in: path, required: true, schema: { type: string, format: uuid } }]
-      responses: { '200': { description: 'Result<AgentMessage[]>，仅 USER/ASSISTANT 可见消息' }, '404': { description: 会话不存在或不属于当前用户 } }
+      summary: 获取会话消息历史
+      parameters: [{ $ref: '#/components/parameters/AgentSessionId' }]
+      responses:
+        '200':
+          description: 成功；仅包含 USER/ASSISTANT 可见消息
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Result'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/AgentMessage' }
+        '404': { description: 会话不存在或不属于当前用户 }
   /agent/actions/{actionId}/confirm:
     post:
+      tags: [Agent]
       security: [{ cookieAuth: [] }]
-      parameters: [{ name: actionId, in: path, required: true, schema: { type: string, format: uuid } }, { name: X-CSRF-TOKEN, in: header, required: true, schema: { type: string } }]
-      responses: { '200': { description: 'Result<AgentAction>；返回 EXECUTED、STALE、EXPIRED、FAILED 或原状态' }, '403': { description: CSRF Token 缺失或错误 }, '404': { description: 动作不存在或不属于当前用户 } }
+      summary: 确认 Agent 写操作
+      parameters: [{ $ref: '#/components/parameters/AgentActionId' }, { $ref: '#/components/parameters/CsrfToken' }]
+      responses:
+        '200':
+          description: 返回 EXECUTED、STALE、EXPIRED、FAILED 或原状态
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Result'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/AgentAction' }
+        '403': { description: CSRF Token 缺失或错误 }
+        '404': { description: 动作不存在或不属于当前用户 }
   /agent/actions/{actionId}/cancel:
     post:
+      tags: [Agent]
       security: [{ cookieAuth: [] }]
-      parameters: [{ name: actionId, in: path, required: true, schema: { type: string, format: uuid } }, { name: X-CSRF-TOKEN, in: header, required: true, schema: { type: string } }]
-      responses: { '200': { description: 返回取消后的动作状态 } }
+      summary: 取消 Agent 写操作
+      parameters: [{ $ref: '#/components/parameters/AgentActionId' }, { $ref: '#/components/parameters/CsrfToken' }]
+      responses:
+        '200':
+          description: 返回取消后的动作状态
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Result'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/AgentAction' }
 
   # ── 用户 ──────────────────────────────────────────────────────────
   /user/login:

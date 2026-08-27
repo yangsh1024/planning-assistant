@@ -195,7 +195,7 @@ public String createExpense(String category, BigDecimal amount, String note) {
 
 公开 SSE 事件固定为 `message_start`、`delta`、`action_required`、`done`、`error`，不发送原始工具调用、工具结果或推理内容。上下文只使用最近 20 条 USER/ASSISTANT 可见消息且最多 30,000 字符；DeepSeek 整个工具循环共享 `AGENT_TIMEOUT_SECONDS` 总截止时间，输出受 `AGENT_MAX_OUTPUT_TOKENS` 和可见消息长度双重限制。
 
-主表：`t_agent_session`、`t_agent_message`、`t_agent_action_audit`
+主表：`t_agent_session`、`t_agent_message`、`t_agent_action_audit`。Agent 会话不是账本数据源；账本仍由 plan/expense Service 和原有表负责。首期不引入向量数据库、RAG、消息队列、任意 SQL Tool、文件/代码执行或网页搜索。
 
 ## 数据库核心表设计说明
 
@@ -205,6 +205,14 @@ public String createExpense(String category, BigDecimal amount, String note) {
 > - 初始化脚本会创建系统预置科目：饮食、交通、租房、通信、其他（`user_id = 0`、`is_system = 1`）
 > - `t_budget_item.sort_order` 维护用户拖拽后的科目顺序，按月独立存储
 > - 所有月份统计均 WHERE `expense_date` BETWEEN 月初 AND 月末，与 `created_at` 无关
+
+阶段二表职责：
+
+- `t_web_login_request`：电脑端登录请求、状态、过期时间，以及浏览器凭据和六位码的摘要；不保存明文票据。
+- `t_web_sso_ticket`：小程序复制登录链接的一次性短票据摘要、过期和消费状态。
+- `t_agent_session`：当前用户的会话、标题和最近活跃时间。
+- `t_agent_message`：仅保存 USER/ASSISTANT 可见消息、模型、用量与失败状态；不保存推理或内部工具消息。
+- `t_agent_action_audit`：待确认写操作的已校验参数快照、目标指纹、状态、幂等键和执行结果。
 
 ```sql
 CREATE TABLE IF NOT EXISTS t_user (

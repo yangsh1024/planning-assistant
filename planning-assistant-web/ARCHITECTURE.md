@@ -31,7 +31,9 @@ src/
 
 Web 不复用小程序 `wx.login()` 或 Bearer Token。小程序确认或短链交换为 HttpOnly Web Cookie；前端使用 `credentials: 'same-origin'`，从同域 XSRF Cookie 读取 Token 并为非 GET 请求添加 `X-CSRF-TOKEN`。运行：`npm install && npm run dev`；验证：`npm run build`。
 
-电脑端优先展示动态小程序码；未完成真机验证或能力不可用时展示运维配置的固定小程序码与六位登录码。手机端由小程序复制一次性短链，票据位于 URL fragment，交换成功后立即从地址栏清除。
+浏览器不能调用小程序 `wx.login()`，因此不复用 `POST /api/user/login`。电脑端优先展示动态小程序码；未完成真机验证或能力不可用时展示运维配置的固定小程序码与六位登录码。
+
+个人主体手机端由已登录小程序复制一次性短链，用户自行粘贴到浏览器打开；不依赖 `web-view`、URL Link 或 URL Scheme，也不承诺小程序自动打开系统浏览器。一次性票据位于 URL fragment，链接不包含长期 JWT；Web 以 POST 交换 Cookie 后立即从地址栏清除 fragment。
 
 ## SSE 流式对话
 
