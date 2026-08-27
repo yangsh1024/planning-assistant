@@ -108,6 +108,21 @@ public class ExpenseService {
         expenseMapper.updateById(expense);
     }
 
+    public ExpenseDto getById(Long expenseId) {
+        Long userId = UserContext.currentUserId();
+        ExpenseWithCategoryDto full = expenseMapper.selectOwnedWithCategoryById(expenseId, userId);
+        if (full == null) {
+            throw new BizException(ErrorCode.NOT_FOUND.getCode(), "记录不存在或不属于当前用户");
+        }
+        return toDto(full);
+    }
+
+    public ExpenseDto getByIdForUpdate(Long expenseId) {
+        ExpenseWithCategoryDto full = expenseMapper.selectOwnedByIdForUpdate(expenseId, UserContext.currentUserId());
+        if (full == null) throw new BizException(ErrorCode.NOT_FOUND.getCode(), "记录不存在或不属于当前用户");
+        return toDto(full);
+    }
+
     public PageData<ExpenseDto> listByMonth(String yearMonth, Long categoryId, int page, int pageSize) {
         Long userId = UserContext.currentUserId();
         validateYearMonth(yearMonth);
@@ -213,6 +228,7 @@ public class ExpenseService {
         dto.setExpenseDate(raw.getExpenseDate());
         dto.setNote(raw.getNote());
         dto.setCreatedAt(raw.getCreatedAt());
+        dto.setUpdatedAt(raw.getUpdatedAt());
         return dto;
     }
 }

@@ -9,6 +9,7 @@
 | ORM | MyBatis-Plus |
 | 数据库 | MySQL 8.x |
 | 鉴权 | Spring Security + JWT（jjwt） |
+| Agent 模型 | DeepSeek Responses API（通过 `AgentModelGateway` 隔离） |
 
 ## Maven 模块结构
 
@@ -81,11 +82,19 @@ com.ysh.planning
 │   ├── service/        # ← Agent 可注入
 │   ├── repository/
 │   └── domain/
+├── webauth/            # Web 登录、六位码与一次性短票据
+│   ├── controller/
+│   ├── service/
+│   ├── repository/
+│   └── domain/
 └── agent/              # 阶段二
-    ├── controller/     # SSE 接口
-    ├── service/        # 对话管理、LLM 调用
+    ├── controller/     # SSE、会话与动作确认接口
+    ├── service/        # 对话、上下文和动作事务编排
+    ├── gateway/        # AgentModelGateway / DeepSeek Responses
     ├── tool/           # Tool 定义，注入 plan/expense service
-    └── domain/         # Session, Message
+    ├── policy/         # 频率、思考参数和动作状态策略
+    ├── repository/
+    └── domain/         # Session, Message, ActionAudit
 ```
 
 ## 权限模型
@@ -108,6 +117,24 @@ public String createExpense(String category, BigDecimal amount, String note) {
     return expenseService.create(new CreateExpenseRequest(category, amount, note));
 }
 ```
+
+读工具只通过现有 plan/expense Service 返回当前用户数据。写工具只能创建 `PENDING_CONFIRMATION` 动作，不能直接调用写 Service；用户通过 REST 确认后，服务端在同一事务内校验归属、状态、过期、幂等和目标指纹，再执行原有业务 Service。模型和工具参数均不得接收或指定 `userId`。
+
+小程序 JWT 带 `token_use=miniapp` 并映射为 `ROLE_MINIAPP`；Web Cookie 中的短期 JWT 带 `token_use=web` 并映射为 `ROLE_WEB`。`/api/agent/**` 仅允许 Web 身份，账本和小程序确认接口仅允许小程序身份，避免两种认证来源跨端调用。
+
+## Web 登录与 CSRF
+
+浏览器不能调用 `wx.login()`，Web 与小程序以 `t_user` 为统一身份：
+
+```
+电脑 Web 创建请求 → 动态码或固定码 + 六位码 → 小程序确认 → 浏览器交换 Web Cookie
+小程序生成一次性短链 → 用户复制到浏览器 → Web 交换 Cookie
+```
+
+- 登录请求有效 2 分钟，短链有效 60 秒，均为单次使用；浏览器证明、六位码和短链票据只保存摘要。
+- 六位码摘要具有活跃唯一约束；确认、拒绝或过期后清空摘要，创建时对碰撞进行有界重试。
+- 动态小程序码须先真机验证；未验证或不可用时设置 `WECHAT_DYNAMIC_QR_ENABLED=false` 并提供 `WECHAT_FIXED_QR_URL`。
+- Web 静态资源与 `/api` 使用同一 HTTPS 域名。认证 Cookie 为 `HttpOnly; Secure; SameSite=Lax`；CSRF Cookie 可读，Cookie 鉴权的非安全请求必须提交匹配的 `X-CSRF-TOKEN`。小程序 Bearer 请求不执行此 CSRF 校验。
 
 ## 各模块接口
 
@@ -163,8 +190,12 @@ public String createExpense(String category, BigDecimal amount, String note) {
 | `POST /api/agent/chat` | 发送消息，SSE 流式返回 |
 | `GET /api/agent/sessions` | 历史会话列表 |
 | `GET /api/agent/sessions/{id}/messages` | 会话消息历史 |
+| `POST /api/agent/actions/{id}/confirm` | 校验归属、过期、幂等与目标指纹后执行 |
+| `POST /api/agent/actions/{id}/cancel` | 取消待确认动作 |
 
-主表：`t_agent_session`、`t_agent_message`
+公开 SSE 事件固定为 `message_start`、`delta`、`action_required`、`done`、`error`，不发送原始工具调用、工具结果或推理内容。上下文只使用最近 20 条 USER/ASSISTANT 可见消息且最多 30,000 字符；DeepSeek 整个工具循环共享 `AGENT_TIMEOUT_SECONDS` 总截止时间，输出受 `AGENT_MAX_OUTPUT_TOKENS` 和可见消息长度双重限制。
+
+主表：`t_agent_session`、`t_agent_message`、`t_agent_action_audit`
 
 ## 数据库核心表设计说明
 
@@ -232,7 +263,11 @@ CREATE TABLE IF NOT EXISTS t_expense (
 );
 ```
 
-阶段二额外表：`t_agent_session`、`t_agent_message`（结构待定）
+阶段二额外表：`t_web_login_request`、`t_web_sso_ticket`、`t_agent_session`、`t_agent_message`、`t_agent_action_audit`。Agent 会话不是账本数据源；账本仍由 plan/expense Service 与原表负责。`t_agent_message` 只保存用户消息和可见助手回复，不保存推理内容或内部工具消息。
+
+已有阶段一数据库升级时执行 `scripts/migrate-phase2-agent-web.sql`；新建开发库仍使用 `scripts/init-dev-database.sql`。
+
+阶段二生产配置均通过环境变量注入：`DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL`、`DEEPSEEK_MODEL`、`AGENT_TIMEOUT_SECONDS`、`AGENT_MAX_OUTPUT_TOKENS`、`AGENT_PER_USER_MINUTE_LIMIT`、`APP_PUBLIC_BASE_URL`、`WECHAT_DYNAMIC_QR_ENABLED`、`WECHAT_FIXED_QR_URL`。密钥、Cookie、对话正文、账本明细和推理内容不得写入生产日志。
 
 > - `t_category` 使用 `is_deleted` 标记已删除的自定义科目，重名直接复用已有科目，不新建
 > - `t_budget_item` 新增 `sort_order`，维护用户拖拽后的科目顺序，按月独立

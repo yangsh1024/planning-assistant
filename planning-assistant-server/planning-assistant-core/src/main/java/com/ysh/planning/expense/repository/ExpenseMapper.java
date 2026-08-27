@@ -75,4 +75,16 @@ public interface ExpenseMapper extends BaseMapper<Expense> {
             "LEFT JOIN t_category c ON e.category_id = c.id " +
             "WHERE e.id = #{id} AND e.is_deleted = false")
     ExpenseWithCategoryDto selectWithCategoryById(@Param("id") Long id);
+
+    @Select("SELECT e.id, e.user_id, e.category_id, c.name AS category_name, " +
+            "e.amount, e.expense_date, e.note, e.created_at, e.updated_at " +
+            "FROM t_expense e LEFT JOIN t_category c ON e.category_id = c.id " +
+            "WHERE e.id = #{id} AND e.user_id = #{userId} AND e.is_deleted = false")
+    ExpenseWithCategoryDto selectOwnedWithCategoryById(@Param("id") Long id, @Param("userId") Long userId);
+
+    @Select("SELECT e.id, e.user_id, e.category_id, c.name AS category_name, " +
+            "e.amount, e.expense_date, e.note, e.created_at, e.updated_at " +
+            "FROM t_expense e LEFT JOIN t_category c ON e.category_id = c.id " +
+            "WHERE e.id = #{id} AND e.user_id = #{userId} AND e.is_deleted = false FOR UPDATE")
+    ExpenseWithCategoryDto selectOwnedByIdForUpdate(@Param("id") Long id, @Param("userId") Long userId);
 }

@@ -16,6 +16,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final WebCookieAuthenticationFilter webCookieAuthenticationFilter;
+    private final WebCsrfFilter webCsrfFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -23,10 +25,16 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/user/login").permitAll()
-                        .anyRequest().authenticated()
+                        .requestMatchers("/api/user/login", "/api/web-auth/requests", "/api/web-auth/requests/*/status", "/api/web-auth/requests/*/qr",
+                                "/api/web-auth/requests/*/exchange", "/api/web-auth/sso/exchange").permitAll()
+                        .requestMatchers("/api/agent/**").hasRole("WEB")
+                        .requestMatchers("/api/web-auth/requests/*/preview", "/api/web-auth/requests/*/approve", "/api/web-auth/requests/*/reject",
+                                "/api/web-auth/fallback/resolve", "/api/web-auth/miniapp-links").hasRole("MINIAPP")
+                        .anyRequest().hasRole("MINIAPP")
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(webCookieAuthenticationFilter, JwtAuthenticationFilter.class)
+                .addFilterAfter(webCsrfFilter, WebCookieAuthenticationFilter.class)
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((req, res, e) -> {
                             res.setContentType("application/json;charset=UTF-8");

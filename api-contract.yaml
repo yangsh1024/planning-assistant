@@ -1,12 +1,12 @@
 openapi: 3.0.3
 info:
   title: 小猫月度预算账本 API
-  version: 1.0.0
+  version: 1.1.0-draft
   description: |
     小猫月度预算账本服务端接口规范。
 
     ## 认证
-    除登录/注册外，所有接口需在 Header 携带 JWT：
+    小程序接口使用 Bearer JWT；Web Agent 使用 HttpOnly Cookie，并为非安全请求提交 `X-CSRF-TOKEN`。
     `Authorization: Bearer <token>`
 
     ## 统一响应体
@@ -34,6 +34,10 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: WEB_AUTH
 
   schemas:
     # ─── 通用响应 ────────────────────────────────────────────────
@@ -403,7 +407,168 @@ components:
 
 # ─── 路径定义 ──────────────────────────────────────────────────────
 
+    WebLoginRequest:
+      type: object
+      required: [requestId, browserProof, mode, expiresAt]
+      properties:
+        requestId: { type: string }
+        browserProof: { type: string, description: 仅浏览器持有的交换凭据 }
+        mode: { type: string, enum: [DYNAMIC_QR, FALLBACK_CODE] }
+        fallbackCode: { type: string, pattern: '^\\d{6}$', nullable: true }
+        fixedQrCodeUrl: { type: string, format: uri, nullable: true, description: 固定小程序码图片地址，回退模式使用 }
+        qrCodeUrl: { type: string, format: uri, nullable: true }
+        expiresAt: { type: string, format: date-time }
+      oneOf:
+        - required: [qrCodeUrl]
+          properties: { mode: { enum: [DYNAMIC_QR] }, fallbackCode: { nullable: true } }
+        - required: [fallbackCode, fixedQrCodeUrl]
+          properties: { mode: { enum: [FALLBACK_CODE] }, qrCodeUrl: { nullable: true } }
+    WebLoginStatus:
+      type: object
+      properties:
+        requestId: { type: string }
+        deviceLabel: { type: string }
+        status: { type: string, enum: [PENDING, APPROVED, REJECTED, EXPIRED, CONSUMED] }
+        expiresAt: { type: string, format: date-time }
+    FallbackCodeRequest:
+      type: object
+      required: [fallbackCode]
+      properties:
+        fallbackCode: { type: string, pattern: '^\d{6}$' }
+    BrowserProofRequest:
+      type: object
+      required: [browserProof]
+      properties:
+        browserProof: { type: string, minLength: 1, description: 仅创建请求的浏览器持有 }
+    SsoExchangeRequest:
+      type: object
+      required: [ticket]
+      properties:
+        ticket: { type: string, minLength: 1, description: URL fragment 中的 60 秒一次性票据 }
+    SsoLink:
+      type: object
+      required: [loginUrl, expiresAt]
+      properties:
+        loginUrl: { type: string, format: uri }
+        expiresAt: { type: string, format: date-time }
+    AgentChatRequest:
+      type: object
+      required: [message]
+      properties:
+        sessionId: { type: string, format: uuid, nullable: true }
+        message: { type: string, minLength: 1, maxLength: 2000 }
+        thinkingEnabled: { type: boolean, default: false }
+        retryUserMessageId: { type: string, format: uuid, nullable: true, description: 失败重试时复用的原 USER 消息；必须属于同一用户与会话且正文一致 }
+    AgentSession:
+      type: object
+      properties:
+        sessionId: { type: string, format: uuid }
+        title: { type: string }
+        updatedAt: { type: string, format: date-time }
+    AgentMessage:
+      type: object
+      properties:
+        messageId: { type: string, format: uuid }
+        role: { type: string, enum: [USER, ASSISTANT] }
+        content: { type: string }
+        action: { $ref: '#/components/schemas/AgentAction', nullable: true }
+        status: { type: string, enum: [COMPLETED, FAILED] }
+        createdAt: { type: string, format: date-time }
+    AgentAction:
+      type: object
+      required: [actionId, type, summary, payload, status, expiresAt]
+      properties:
+        actionId: { type: string, format: uuid }
+        type: { type: string, enum: [CREATE_EXPENSE, UPDATE_EXPENSE, DELETE_EXPENSE, SAVE_PLAN, CREATE_CATEGORY] }
+        summary: { type: string }
+        payload: { type: object, additionalProperties: true }
+        result: { type: object, additionalProperties: true, nullable: true, description: 执行结果或可读失败原因 }
+        status: { type: string, enum: [PENDING_CONFIRMATION, EXECUTING, CANCELLED, EXPIRED, STALE, EXECUTED, FAILED] }
+        expiresAt: { type: string, format: date-time }
+
 paths:
+  /web-auth/requests:
+    post:
+      security: []
+      summary: 创建电脑端网页登录请求（动态码或固定码兜底）
+      responses:
+        '200': { description: 成功；data 为 WebLoginRequest，动态码与固定码字段互斥 }
+        '429': { description: 创建过于频繁 }
+        '503': { description: 固定码配置缺失或暂时无法分配登录码 }
+  /web-auth/requests/{requestId}/status:
+    get:
+      security: []
+      parameters: [{ name: requestId, in: path, required: true, schema: { type: string } }, { name: X-Web-Login-Proof, in: header, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: data 为 WebLoginStatus }
+        '404': { description: 请求不存在或浏览器凭据错误 }
+  /web-auth/requests/{requestId}/qr:
+    get:
+      security: []
+      summary: 获取动态小程序码
+      parameters: [{ name: requestId, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: PNG 图片, content: { image/png: { schema: { type: string, format: binary } } } } }
+  /web-auth/requests/{requestId}/preview:
+    get:
+      summary: 小程序预览登录请求
+      parameters: [{ name: requestId, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: data 为 WebLoginStatus }, '404': { description: 请求不存在或已不可确认 } }
+  /web-auth/requests/{requestId}/approve:
+    post:
+      parameters: [{ name: requestId, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: 已确认 } }
+  /web-auth/requests/{requestId}/reject:
+    post:
+      parameters: [{ name: requestId, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: 已拒绝 } }
+  /web-auth/fallback/resolve:
+    post:
+      summary: 小程序通过六位码解析登录请求
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/FallbackCodeRequest' } } } }
+      responses: { '200': { description: data 为 WebLoginStatus }, '404': { description: 登录码不存在或已失效 }, '429': { description: 尝试过于频繁 } }
+  /web-auth/miniapp-links:
+    post:
+      summary: 小程序生成一次性 Web 登录链接
+      responses: { '200': { description: data 为 SsoLink }, '401': { description: 小程序身份无效 } }
+  /web-auth/sso/exchange:
+    post:
+      security: []
+      summary: 一次性短票据交换 Web Cookie
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SsoExchangeRequest' } } } }
+      responses: { '200': { description: 设置 HttpOnly WEB_AUTH 和可读 XSRF-TOKEN Cookie }, '409': { description: 票据过期或已使用 } }
+  /web-auth/requests/{requestId}/exchange:
+    post:
+      security: []
+      parameters: [{ name: requestId, in: path, required: true, schema: { type: string } }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/BrowserProofRequest' } } } }
+      responses: { '200': { description: 设置 HttpOnly WEB_AUTH 和可读 XSRF-TOKEN Cookie }, '401': { description: 浏览器凭据错误 }, '409': { description: 请求未确认、过期、拒绝或已使用 } }
+  /agent/chat:
+    post:
+      security: [{ cookieAuth: [] }]
+      summary: 发送 Agent 消息并接收 SSE
+      description: 仅发送 message_start、delta、action_required、done、error；不发送推理内容或内部工具事件。429、总超时和断流以 error 事件或对应 HTTP 状态表示，均可重试。
+      parameters: [{ name: X-CSRF-TOKEN, in: header, required: true, schema: { type: string } }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AgentChatRequest' } } } }
+      responses: { '200': { description: text/event-stream }, '403': { description: CSRF Token 缺失或错误 }, '429': { description: 用户分钟限流 }, '503': { description: DeepSeek 不可用 } }
+  /agent/sessions:
+    get:
+      security: [{ cookieAuth: [] }]
+      responses: { '200': { description: 'Result<AgentSession[]>' } }
+  /agent/sessions/{sessionId}/messages:
+    get:
+      security: [{ cookieAuth: [] }]
+      parameters: [{ name: sessionId, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { '200': { description: 'Result<AgentMessage[]>，仅 USER/ASSISTANT 可见消息' }, '404': { description: 会话不存在或不属于当前用户 } }
+  /agent/actions/{actionId}/confirm:
+    post:
+      security: [{ cookieAuth: [] }]
+      parameters: [{ name: actionId, in: path, required: true, schema: { type: string, format: uuid } }, { name: X-CSRF-TOKEN, in: header, required: true, schema: { type: string } }]
+      responses: { '200': { description: 'Result<AgentAction>；返回 EXECUTED、STALE、EXPIRED、FAILED 或原状态' }, '403': { description: CSRF Token 缺失或错误 }, '404': { description: 动作不存在或不属于当前用户 } }
+  /agent/actions/{actionId}/cancel:
+    post:
+      security: [{ cookieAuth: [] }]
+      parameters: [{ name: actionId, in: path, required: true, schema: { type: string, format: uuid } }, { name: X-CSRF-TOKEN, in: header, required: true, schema: { type: string } }]
+      responses: { '200': { description: 返回取消后的动作状态 } }
 
   # ── 用户 ──────────────────────────────────────────────────────────
   /user/login:

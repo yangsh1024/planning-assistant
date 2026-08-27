@@ -28,6 +28,7 @@ public class JwtUtil {
     public String generateToken(Long userId) {
         return Jwts.builder()
                 .subject(userId.toString())
+                .claim("token_use", "miniapp")
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + EXPIRY_MS))
                 .signWith(getKey())
@@ -40,6 +41,27 @@ public class JwtUtil {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+        String tokenUse = claims.get("token_use", String.class);
+        if (tokenUse != null && !"miniapp".equals(tokenUse)) throw new JwtException("not a miniapp token");
+        return Long.parseLong(claims.getSubject());
+    }
+
+    public String generateWebToken(Long userId) {
+        return Jwts.builder()
+                .subject(userId.toString())
+                .claim("token_use", "web")
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + 8L * 3600 * 1000))
+                .signWith(getKey())
+                .compact();
+    }
+
+    public Long parseWebUserId(String token) throws JwtException {
+        Claims claims = Jwts.parser().verifyWith(getKey()).build()
+                .parseSignedClaims(token).getPayload();
+        if (!"web".equals(claims.get("token_use", String.class))) {
+            throw new JwtException("not a web token");
+        }
         return Long.parseLong(claims.getSubject());
     }
 

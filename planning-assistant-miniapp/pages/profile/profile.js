@@ -1,4 +1,4 @@
-const { get, put } = require('../../utils/request');
+const { get, put, post } = require('../../utils/request');
 
 const DEFAULT_AVATAR_KEY = 'cat-orange';
 const AVATAR_OPTIONS = [
@@ -79,6 +79,15 @@ Page({
   goToBudget() {
     this._closeOverlays();
     wx.navigateTo({ url: '/pages/plan/edit/edit' });
+  },
+
+  copyWebLoginLink() {
+    post('/web-auth/miniapp-links', {})
+      .then((result) => wx.setClipboardData({
+        data: result.loginUrl,
+        success: () => wx.showModal({ title: '登录链接已复制', content: '请自行粘贴到手机或电脑浏览器中打开，链接 60 秒内仅可使用一次。', showCancel: false }),
+      }))
+      .catch((err) => wx.showToast({ title: err.message || '生成链接失败', icon: 'none' }));
   },
 
   openEditPanel() {

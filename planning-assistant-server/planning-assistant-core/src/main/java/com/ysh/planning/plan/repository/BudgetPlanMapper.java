@@ -12,6 +12,9 @@ public interface BudgetPlanMapper extends BaseMapper<BudgetPlan> {
     @Select("SELECT * FROM t_budget_plan WHERE user_id = #{userId} AND `year_month` = #{yearMonth} LIMIT 1")
     BudgetPlan selectByUserIdAndYearMonth(@Param("userId") Long userId, @Param("yearMonth") String yearMonth);
 
+    @Select("SELECT * FROM t_budget_plan WHERE user_id = #{userId} AND `year_month` = #{yearMonth} LIMIT 1 FOR UPDATE")
+    BudgetPlan selectByUserIdAndYearMonthForUpdate(@Param("userId") Long userId, @Param("yearMonth") String yearMonth);
+
     @Select("SELECT COUNT(*) FROM t_budget_plan WHERE user_id = #{userId}")
     long countByUserId(@Param("userId") Long userId);
 }

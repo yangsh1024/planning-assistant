@@ -11,7 +11,7 @@
 ```
 ┌─────────────────────────────────────────────────┐
 │                   客户端层                        │
-│   微信小程序 (阶段一)       Web Client (阶段二)   │
+│ 微信小程序（账本 / 授权）    Web Client（Agent）  │
 └──────────────────────┬──────────────────────────┘
                        │ HTTPS
                        ▼
@@ -29,7 +29,7 @@
 │                    ↑ @Autowired Service Bean      │
 │           ┌────────────────────┐                 │
 │           │   agent（阶段二）   │                 │
-│           │   LLM + Tool Use   │                 │
+│           │ LLM 网关 + Tool 策略│                 │
 │           └────────────────────┘                 │
 └──────────────────────┬───────────────────────────┘
                        │
@@ -39,8 +39,9 @@
 ## 关键决策
 
 - 不单独部署 Spring Cloud Gateway，由 Nginx + Spring Security 组合替代，节省单机资源
-- Agent 合并进单体应用，通过 Spring Bean 注入调用业务 Service，不直连数据库
-- 权限由 Spring SecurityContext 统一控制，小程序和 Agent 走同一条鉴权路径
+- Agent 合并进单体应用，通过 Spring Bean 注入调用业务 Service，不直连数据库；账本写操作必须经确认动作执行
+- 权限由 Spring SecurityContext 统一控制，小程序 Bearer 与 Web Cookie 使用不同 token purpose 和角色
+- 个人主体小程序不使用 `web-view`、URL Link 或 URL Scheme；电脑端由小程序确认，手机端复制短时一次性链接
 - **业务规则、数据模型及接口定义以各子模块 ARCHITECTURE.md 为准**，本文件仅作整体概览
 
 ## 子模块文档
@@ -62,11 +63,11 @@
 | 入口 | Nginx（SSL 终止 + 反向代理） |
 | 构建 | Maven 多模块，单 fat JAR |
 | 小程序 | 原生微信小程序 |
-| Web 客户端 | Vue 3 / React 18 |
-| Agent | Claude API 或国内模型 SDK |
+| Web 客户端 | Vue 3 + TypeScript + Vite + Pinia + Tailwind CSS |
+| Agent | DeepSeek Responses API（默认 `deepseek-v4-flash`） |
 
 ## 阶段规划
 
 **阶段一：** Maven 骨架 → common/security → 微信登录 → plan/expense 模块 → 小程序联调
 
-**阶段二：** agent 模块 → Web 客户端 → SSE 流式对话 → Tool Use 工具链接入
+**阶段二：** Web Cookie/CSRF → DeepSeek function tools → Web POST SSE → 写操作确认 → 小程序扫码/短链登录

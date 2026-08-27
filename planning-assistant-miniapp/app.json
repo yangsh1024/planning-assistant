@@ -5,6 +5,7 @@
     "pages/expense/stats/stats",
     "pages/expense/add/add",
     "pages/profile/profile",
+    "pages/auth/web-login/web-login",
     "pages/plan/edit/edit",
     "pages/agreement/agreement"
   ],

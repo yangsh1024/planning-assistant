@@ -131,6 +131,12 @@ public class PlanService {
         return dto;
     }
 
+    public BudgetPlanDto getPlanForUpdate(String yearMonth) {
+        validateYearMonth(yearMonth);
+        budgetPlanMapper.selectByUserIdAndYearMonthForUpdate(UserContext.currentUserId(), yearMonth);
+        return getPlan(yearMonth);
+    }
+
     public BudgetSummaryDto getSummary(String yearMonth) {
         Long userId = UserContext.currentUserId();
         validateYearMonth(yearMonth);

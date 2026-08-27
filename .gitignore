@@ -20,3 +20,8 @@ conf/server.env
 *.log
 .env
 .env.*
+
+# Agent Web 构建产物
+planning-assistant-web/node_modules/
+planning-assistant-web/dist/
+planning-assistant-web/*.tsbuildinfo
