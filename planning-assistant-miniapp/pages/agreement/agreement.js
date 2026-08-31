@@ -1,4 +1,4 @@
-// pages/agreement/agreement.js
+/** 根据入口展示用户协议或隐私政策，避免维护两套页面状态。 */
 Page({
   data: {
     type: 'user', // 'user' | 'privacy'

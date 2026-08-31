@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/** 维护所有用户共享的内置科目，保证新旧部署使用同一份标准分类。 */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -26,7 +27,7 @@ public class SystemCategoryInitializer implements ApplicationRunner {
         List<Category> existing = categoryMapper.selectList(
                 new LambdaQueryWrapper<Category>().eq(Category::getUserId, 0L));
 
-        // Soft-delete system categories no longer in the canonical list
+        // 软删除已废弃科目，避免历史账单失去原有分类。
         for (Category cat : existing) {
             boolean shouldExist = SYSTEM_CATEGORIES.contains(cat.getName());
             if (!shouldExist && !Boolean.TRUE.equals(cat.getIsDeleted())) {
@@ -36,7 +37,7 @@ public class SystemCategoryInitializer implements ApplicationRunner {
             }
         }
 
-        // Insert any missing canonical categories
+        // 补齐缺失的标准科目，确保新用户无需手动创建基础分类。
         java.util.Set<String> existingNames = existing.stream()
                 .filter(c -> !Boolean.TRUE.equals(c.getIsDeleted()))
                 .map(Category::getName)

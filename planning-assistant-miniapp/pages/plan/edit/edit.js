@@ -1,4 +1,4 @@
-// pages/plan/edit/edit.js
+/** 编辑指定月份的预算分类和额度，并可继承最近的历史方案作为起点。 */
 const { get, post } = require('../../../utils/request');
 const { formatYearMonth } = require('../../../utils/date');
 
@@ -45,6 +45,7 @@ Page({
   },
 
   loadPlan() {
+    // 当月无计划时仅继承最近方案的结构，用户仍需主动保存确认。
     this.setData({ pageStatus: 'loading', pageMessage: '', inherited: false });
     const ym = this.data.currentYearMonth;
 

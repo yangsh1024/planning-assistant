@@ -1,4 +1,4 @@
-// components/state-view/state-view.js
+/** 统一展示加载、空数据和失败状态，保证页面使用一致的重试入口。 */
 Component({
   properties: {
     status: {

@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+/** 所有 REST 接口统一使用的业务响应外层结构。 */
 public class Result<T> {
 
     private int code;

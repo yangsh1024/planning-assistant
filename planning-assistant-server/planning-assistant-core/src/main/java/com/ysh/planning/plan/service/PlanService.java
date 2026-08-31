@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/** 保存月度预算并汇总实际开支，生成每个分类的预算执行结果。 */
 @Service
 @RequiredArgsConstructor
 public class PlanService {
@@ -45,6 +46,7 @@ public class PlanService {
 
     @Transactional
     public BudgetPlanDto savePlan(String yearMonth, SaveBudgetPlanRequest req) {
+        // 整月计划以完整替换保存，先验证所有分类避免写入半成品方案。
         Long userId = UserContext.currentUserId();
         validateYearMonth(yearMonth);
 
@@ -67,6 +69,7 @@ public class PlanService {
         }
 
         BudgetPlan existing = budgetPlanMapper.selectByUserIdAndYearMonth(userId, yearMonth);
+        // 替换旧方案前删除其明细，避免同月保留两份额度。
         if (existing != null) {
             budgetItemMapper.delete(new LambdaQueryWrapper<BudgetItem>().eq(BudgetItem::getPlanId, existing.getId()));
             budgetPlanMapper.deleteById(existing.getId());

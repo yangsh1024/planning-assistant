@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'; import { cancelAction, confirmAction, type AgentAction } from '../api';
+/** 展示 Agent 写操作的内容与状态，并要求用户显式确认或取消。 */
 const props=defineProps<{action:AgentAction}>(); const current=ref(props.action); const busy=ref(false); const error=ref('');
 const fieldLabels:Record<string,string>={expenseId:'开支编号',categoryId:'科目编号',amount:'金额（元）',expenseDate:'日期',note:'备注',yearMonth:'月份',items:'预算明细',name:'科目名称',sortOrder:'排序'};
 const statusLabels:Record<AgentAction['status'],string>={PENDING_CONFIRMATION:'待确认',EXECUTING:'执行中',CANCELLED:'已取消',EXPIRED:'已过期',STALE:'账本已变化，请重新发起',EXECUTED:'已执行',FAILED:'执行失败'};

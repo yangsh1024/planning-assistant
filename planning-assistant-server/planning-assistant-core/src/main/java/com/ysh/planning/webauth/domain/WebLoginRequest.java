@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 
 @Data
 @TableName("t_web_login_request")
+/** 保存浏览器登录的小程序确认状态与短时校验凭据摘要。 */
 public class WebLoginRequest {
     @TableId
     private String id;

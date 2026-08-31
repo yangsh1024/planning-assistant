@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.util.Date;
 
+/** 签发并区分小程序与 Web 用途的 JWT，避免两类凭据跨端复用。 */
 @Component
 public class JwtUtil {
 
@@ -25,6 +26,12 @@ public class JwtUtil {
         getKey();
     }
 
+    /**
+     * 签发小程序身份令牌。
+     * <ol><li>标记用途</li><li>设置期限</li><li>完成签名</li></ol>
+     * @param userId 已认证用户标识
+     * @return 小程序 Bearer JWT
+     */
     public String generateToken(Long userId) {
         return Jwts.builder()
                 .subject(userId.toString())
@@ -35,6 +42,13 @@ public class JwtUtil {
                 .compact();
     }
 
+    /**
+     * 解析并校验小程序令牌。
+     * <ol><li>验签解析</li><li>核对用途</li><li>返回用户</li></ol>
+     * @param token Bearer JWT
+     * @return 令牌中的用户标识
+     * @throws JwtException 令牌无效或用途错误时抛出
+     */
     public Long parseUserId(String token) throws JwtException {
         Claims claims = Jwts.parser()
                 .verifyWith(getKey())

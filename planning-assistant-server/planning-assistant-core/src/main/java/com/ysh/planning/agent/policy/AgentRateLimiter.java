@@ -11,7 +11,9 @@ public class AgentRateLimiter {
     private final int limit;
     private final ConcurrentHashMap<Long, Window> windows = new ConcurrentHashMap<>();
 
-    public AgentRateLimiter(@Value("${agent.per-user-minute-limit:10}") int limit) { this.limit = Math.max(1, limit); }
+    public AgentRateLimiter(@Value("${agent.per-user-minute-limit:10}") int limit) {
+        this.limit = Math.max(1, limit);
+    }
 
     public boolean tryAcquire(Long userId, Instant now) {
         Window window = windows.compute(userId, (key, current) -> {
@@ -21,5 +23,6 @@ public class AgentRateLimiter {
         return window.count <= limit;
     }
 
-    private record Window(Instant startedAt, int count) { }
+    private record Window(Instant startedAt, int count) {
+    }
 }

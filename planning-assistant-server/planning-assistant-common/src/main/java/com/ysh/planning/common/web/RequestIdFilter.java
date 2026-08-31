@@ -15,6 +15,7 @@ import java.util.UUID;
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
+/** 为每个请求生成可回传的追踪标识，关联接口响应和异步日志。 */
 public class RequestIdFilter extends OncePerRequestFilter {
     public static final String HEADER = "X-Request-ID";
     public static final String MDC_KEY = "requestId";
@@ -22,6 +23,7 @@ public class RequestIdFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
+        // 在线程上下文中暂存请求标识，使后续业务日志能关联同一次请求。
         String requestId = UUID.randomUUID().toString();
         response.setHeader(HEADER, requestId);
         MDC.put(MDC_KEY, requestId);

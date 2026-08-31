@@ -31,6 +31,10 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+/**
+ * 管理 Agent 写操作从确认卡片到最终执行的状态流转。
+ * 在执行前核验目标快照，避免用户确认旧数据后覆盖账本的新变化。
+ */
 public class AgentActionService {
     private final AgentActionMapper actionMapper;
     private final ExpenseService expenseService;
@@ -39,6 +43,16 @@ public class AgentActionService {
     private final ObjectMapper objectMapper;
     private final TransactionTemplate transactionTemplate;
 
+    /**
+     * 创建等待用户确认的写操作。
+     * <ol><li>保存意图</li><li>记录快照</li><li>设定时限</li></ol>
+     * @param sessionId 发起操作的会话标识
+     * @param type 受支持的写操作类型
+     * @param summary 展示给用户的操作摘要
+     * @param payload 经工具校验后的操作内容
+     * @return 待确认操作的展示数据
+     * @throws BizException 目标数据无法读取时抛出
+     */
     public AgentActionDto createPending(String sessionId, String type, String summary, JsonNode payload) {
         Long userId = UserContext.currentUserId();
         AgentAction action = new AgentAction();
@@ -50,6 +64,12 @@ public class AgentActionService {
         return toDto(action);
     }
 
+    /**
+     * 确认并执行一项待确认操作。
+     * <ol><li>抢占执行</li><li>核验快照</li><li>提交结果</li></ol>
+     * @param actionId 待确认操作标识
+     * @return 操作执行后的最新状态
+     */
     public AgentActionDto confirm(String actionId) {
         Long userId = UserContext.currentUserId();
         try {
@@ -69,6 +89,7 @@ public class AgentActionService {
             if ("PENDING_CONFIRMATION".equals(action.getStatus()) && !action.getExpiresAt().isAfter(now)) actionMapper.expirePending(actionId, userId, now);
             return toDto(requireOwned(actionId, userId));
         }
+        // 先原子抢占，重复点击或并发确认只能由一个请求进入执行阶段。
         if (actionMapper.claim(actionId, userId) != 1) {
             AgentAction current = requireOwned(actionId, userId);
             if ("PENDING_CONFIRMATION".equals(current.getStatus()) && !current.getExpiresAt().isAfter(LocalDateTime.now())) actionMapper.expirePending(actionId, userId, LocalDateTime.now());
@@ -78,16 +99,25 @@ public class AgentActionService {
         String currentFingerprint;
         try { currentFingerprint = fingerprintTarget(action.getActionType(), payload, true); }
         catch (BizException e) { currentFingerprint = null; }
+        // 对可变目标重新取锁内快照，账本变化后不执行用户基于旧内容作出的确认。
         if (action.getTargetFingerprint() != null && !action.getTargetFingerprint().equals(currentFingerprint)) {
             action.setStatus("STALE"); action.setUpdatedAt(now); actionMapper.updateById(action); return toDto(action);
         }
         try {
+            // 只有通过确认和快照校验的意图才会调用实际写入服务。
             Object result = execute(action.getActionType(), payload);
             action.setStatus("EXECUTED"); action.setResultJson(objectMapper.writeValueAsString(result));
         } catch (Exception e) { throw new ActionExecutionException(e); }
         action.setUpdatedAt(LocalDateTime.now()); actionMapper.updateById(action); return toDto(action);
     }
 
+    /**
+     * 取消尚未开始执行的操作。
+     * <ol><li>校验归属</li><li>更新状态</li></ol>
+     * @param actionId 待取消操作标识
+     * @return 取消后的最新状态
+     * @throws BizException 操作不属于当前用户或不存在时抛出
+     */
     public AgentActionDto cancel(String actionId) {
         Long userId = UserContext.currentUserId(); AgentAction action = requireOwned(actionId, userId);
         if ("PENDING_CONFIRMATION".equals(action.getStatus())) {
@@ -96,6 +126,13 @@ public class AgentActionService {
         return toDto(requireOwned(actionId, userId));
     }
 
+    /**
+     * 获取当前用户的一项操作状态。
+     * <ol><li>校验归属</li><li>处理过期</li></ol>
+     * @param actionId 操作标识
+     * @return 已同步过期状态的操作数据
+     * @throws BizException 操作不属于当前用户或不存在时抛出
+     */
     public AgentActionDto getOwned(String actionId) {
         Long userId = UserContext.currentUserId(); AgentAction action = requireOwned(actionId, userId);
         if ("PENDING_CONFIRMATION".equals(action.getStatus()) && !action.getExpiresAt().isAfter(LocalDateTime.now())) {

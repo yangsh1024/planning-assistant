@@ -1,4 +1,5 @@
 const { get, post } = require('../../../utils/request');
+/** 在已登录小程序中确认浏览器登录请求，并支持扫码和六码兜底。 */
 Page({
   data: { requestId: '', deviceLabel: '', loading: true, fallbackCode: '' },
   onLoad(options) { if (!getApp().checkAuth()) return; const requestId = options.requestId || (options.scene ? decodeURIComponent(options.scene) : ''); if (requestId) this.load(requestId); else this.setData({ loading: false }); },
@@ -24,6 +25,7 @@ Page({
   },
   inputCode(e) { this.setData({ fallbackCode: e.detail.value }); },
   resolveCode() { if (!/^\d{6}$/.test(this.data.fallbackCode)) { wx.showToast({ title: '请输入六位登录码', icon: 'none' }); return; } post('/web-auth/fallback/resolve', { fallbackCode: this.data.fallbackCode }).then((data) => this.setData({ requestId: data.requestId, deviceLabel: data.deviceLabel })).catch((err) => wx.showToast({ title: err.message || '登录码无效', icon: 'none' })); },
+  // 明确确认才会授权浏览器，避免扫码或输入登录码后自动建立 Web 会话。
   approve() { if (!this.data.requestId) return; post(`/web-auth/requests/${this.data.requestId}/approve`, {}).then(() => wx.showToast({ title: '已确认', icon: 'success' })).catch((err) => wx.showToast({ title: err.message || '确认失败', icon: 'none' })); },
   reject() { if (!this.data.requestId) { wx.navigateBack(); return; } post(`/web-auth/requests/${this.data.requestId}/reject`, {}).finally(() => wx.navigateBack()); },
 });

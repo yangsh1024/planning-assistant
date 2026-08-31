@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/** 管理用户开支的归属校验、录入修改、软删除和统计转换。 */
 @Service
 @RequiredArgsConstructor
 public class ExpenseService {
@@ -40,6 +41,7 @@ public class ExpenseService {
     private final CategoryMapper categoryMapper;
 
     public ExpenseDto create(CreateExpenseRequest req) {
+        // 录入前同时校验金额、日期与可用科目，保持账本统计数据可信。
         Long userId = UserContext.currentUserId();
         BigDecimal amount = MoneyValidator.parsePositiveAmount(req.getAmount());
         validateExpenseDate(req.getExpenseDate());
@@ -94,6 +96,7 @@ public class ExpenseService {
     }
 
     public void delete(Long expenseId) {
+        // 使用软删除保留预算和历史报表所依赖的原始记录。
         Long userId = UserContext.currentUserId();
         Expense expense = expenseMapper.selectOne(
                 new LambdaQueryWrapper<Expense>()

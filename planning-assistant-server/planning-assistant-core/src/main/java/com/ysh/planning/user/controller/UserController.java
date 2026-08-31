@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/user")
 @RequiredArgsConstructor
+/** 提供小程序登录和当前用户资料管理接口。 */
 public class UserController {
 
     private final UserService userService;

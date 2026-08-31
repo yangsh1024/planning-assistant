@@ -1,8 +1,8 @@
-// pages/expense/stats/stats.js
+/** 提供月度开支汇总、分类筛选和账单明细之间的切换。 */
 const { get } = require('../../../utils/request');
 const { formatYearMonth } = require('../../../utils/date');
 
-// Pie chart color palette (one per category, derived from the accent hue family)
+// 为各分类分配稳定的图区分色，便于用户比较消费占比。
 const CHART_COLORS = [
   '#0EA5E9', '#38BDF8', '#7DD3FC', '#F59E0B',
   '#FCA5A5', '#10B981', '#F97316', '#8B5CF6',

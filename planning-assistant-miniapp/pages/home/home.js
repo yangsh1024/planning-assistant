@@ -1,4 +1,4 @@
-// pages/home/home.js
+/** 展示月度预算执行摘要，并标识超支分类供用户继续查看。 */
 const { get } = require('../../utils/request');
 const { formatYearMonth } = require('../../utils/date');
 
@@ -35,6 +35,7 @@ Page({
   },
 
   loadData() {
+    // 摘要缺少预算时保留单独状态，引导用户建立月度计划而非显示空白。
     this.setData({ pageStatus: 'loading', pageMessage: '' });
     get(`/plan/${this.data.currentYearMonth}/summary`)
       .then((data) => {

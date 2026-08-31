@@ -1,4 +1,4 @@
-// components/selector/selector.js
+/** 通用选项选择组件，保持外部值与展示标签在异步更新时同步。 */
 Component({
   properties: {
     options: {

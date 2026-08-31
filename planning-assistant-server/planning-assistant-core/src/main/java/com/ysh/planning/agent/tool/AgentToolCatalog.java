@@ -4,7 +4,8 @@ import java.util.List;
 import java.util.Map;
 
 public final class AgentToolCatalog {
-    private AgentToolCatalog() { }
+    private AgentToolCatalog() {
+    }
 
     public static List<Map<String, Object>> definitions() {
         return List.of(
@@ -21,22 +22,48 @@ public final class AgentToolCatalog {
     }
 
     private static Map<String, Object> tool(String name, String description, Map<String, Object> parameters, List<String> required) {
-        parameters.put("required", required); parameters.put("additionalProperties", false);
+        parameters.put("required", required);
+        parameters.put("additionalProperties", false);
         return Map.of("type", "function", "name", name, "description", description, "parameters", parameters);
     }
+
     private static Map<String, Object> expenseProps(boolean update) {
-        Map<String, Object> fields = new java.util.LinkedHashMap<>(); if (update) fields.put("expenseId", integer());
-        fields.put("categoryId", integer()); fields.put("amount", string("两位小数字符串")); fields.put("expenseDate", string("yyyy-MM-dd")); fields.put("note", string("备注")); return props(fields);
+        Map<String, Object> fields = new java.util.LinkedHashMap<>();
+        if (update) fields.put("expenseId", integer());
+        fields.put("categoryId", integer());
+        fields.put("amount", string("两位小数字符串"));
+        fields.put("expenseDate", string("yyyy-MM-dd"));
+        fields.put("note", string("备注"));
+        return props(fields);
     }
+
     private static Map<String, Object> budgetItems() {
         Map<String, Object> item = props(Map.of("categoryId", positiveInteger(), "amount", string("两位小数字符串"), "sortOrder", boundedInteger(0, 10_000)));
         item.put("required", List.of("categoryId", "amount", "sortOrder"));
         item.put("additionalProperties", false);
         return Map.of("type", "array", "minItems", 1, "items", item);
     }
-    private static Map<String, Object> props(Map<String, Object> fields) { Map<String, Object> result = new java.util.LinkedHashMap<>(); result.put("type", "object"); result.put("properties", fields); return result; }
-    private static Map<String, Object> string(String description) { return Map.of("type", "string", "description", description); }
-    private static Map<String, Object> integer() { return Map.of("type", "integer"); }
-    private static Map<String, Object> positiveInteger() { return Map.of("type", "integer", "minimum", 1); }
-    private static Map<String, Object> boundedInteger(int min, int max) { return Map.of("type", "integer", "minimum", min, "maximum", max); }
+
+    private static Map<String, Object> props(Map<String, Object> fields) {
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("type", "object");
+        result.put("properties", fields);
+        return result;
+    }
+
+    private static Map<String, Object> string(String description) {
+        return Map.of("type", "string", "description", description);
+    }
+
+    private static Map<String, Object> integer() {
+        return Map.of("type", "integer");
+    }
+
+    private static Map<String, Object> positiveInteger() {
+        return Map.of("type", "integer", "minimum", 1);
+    }
+
+    private static Map<String, Object> boundedInteger(int min, int max) {
+        return Map.of("type", "integer", "minimum", min, "maximum", max);
+    }
 }

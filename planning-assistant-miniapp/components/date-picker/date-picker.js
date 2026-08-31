@@ -1,4 +1,4 @@
-// components/date-picker/date-picker.js
+/** 日期与月份选择组件，统一输出账本接口使用的标准日期格式。 */
 Component({
   properties: {
     mode: {
@@ -175,6 +175,7 @@ Component({
         const d = String(tempDay).padStart(2, '0');
         value = `${tempYear}-${tempMonth}-${d}`;
       }
+      // 禁止选择超出业务页面传入上限的日期，例如未来开支日期。
       if (this.properties.max && value > this.properties.max) {
         wx.showToast({ title: '不能选择未来日期', icon: 'none' });
         return;

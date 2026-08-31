@@ -13,6 +13,10 @@ import java.io.IOException;
 import java.util.Set;
 
 @Component
+/**
+ * 校验携带 Web 身份 Cookie 的非安全请求。
+ * 使用双提交 Cookie，阻止第三方页面借用浏览器自动附带的身份 Cookie 发起写操作。
+ */
 public class WebCsrfFilter extends OncePerRequestFilter {
     public static final String CSRF_COOKIE = "XSRF-TOKEN";
     private static final Set<String> SAFE_METHODS = Set.of(HttpMethod.GET.name(), HttpMethod.HEAD.name(), HttpMethod.OPTIONS.name());
@@ -20,6 +24,7 @@ public class WebCsrfFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
+        // 仅 Web Cookie 请求需要该校验，小程序 Bearer Token 不走浏览器 CSRF 威胁模型。
         if (!SAFE_METHODS.contains(request.getMethod()) && hasWebCookie(request)) {
             String expected = cookieValue(request, CSRF_COOKIE);
             String actual = request.getHeader("X-CSRF-TOKEN");

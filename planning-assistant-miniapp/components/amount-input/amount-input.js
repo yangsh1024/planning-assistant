@@ -1,4 +1,4 @@
-// components/amount-input/amount-input.js
+/** 金额输入组件在录入阶段限制精度，避免无效金额进入表单状态。 */
 Component({
   properties: {
     value: {
@@ -34,6 +34,7 @@ Component({
     },
 
     _sanitizeAmount(raw) {
+      // 输入时即限制位数与小数精度，使提示与服务端金额契约保持一致。
       let value = '';
       let hasDecimal = false;
       let decimalLength = 0;

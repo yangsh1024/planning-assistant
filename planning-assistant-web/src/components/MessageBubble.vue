@@ -4,6 +4,7 @@ import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 import { MARKDOWN_ALLOWED_ATTR, MARKDOWN_ALLOWED_TAGS } from '../markdownPolicy';
 
+/** 渲染对话消息；助手 Markdown 必须净化并限制链接协议。 */
 const props = defineProps<{ role:'USER'|'ASSISTANT'; content:string; failed?:boolean }>();
 const rendered = computed(() => {
   const sanitized = DOMPurify.sanitize(marked.parse(props.content) as string, {

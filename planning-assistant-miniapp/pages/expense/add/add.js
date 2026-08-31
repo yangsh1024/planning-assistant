@@ -1,4 +1,4 @@
-// pages/expense/add/add.js
+/** 处理开支新增、编辑与删除，并在无预算时让用户主动决定是否继续记录。 */
 const { get, post, put, del } = require('../../../utils/request');
 
 Page({
@@ -26,7 +26,7 @@ Page({
     this.setData({ expenseDate: today, currentYearMonth: ym, today });
 
     if (options.expenseId) {
-      // Editing — no plan check needed
+      // 编辑既有记录不要求当月预算仍存在，避免历史账单无法修正。
       this._loadCategories(() => {
         this.setData({
           expenseId: options.expenseId,
@@ -115,7 +115,7 @@ Page({
       return;
     }
 
-    // Format amount to 2 decimal places using string arithmetic
+    // 以字符串格式化金额，避免前端浮点计算改变用户录入的数值。
     const formattedAmount = this._formatAmount(amountRaw);
     const body = {
       categoryId: Number(categoryId),

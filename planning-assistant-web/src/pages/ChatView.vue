@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'; import { chat, messages, sessions, type AgentAction, type Message, type Session } from '../api'; import MessageBubble from '../components/MessageBubble.vue'; import SessionList from '../components/SessionList.vue'; import StateView from '../components/StateView.vue'; import ActionConfirm from '../components/ActionConfirm.vue';
+/** 管理会话历史与流式对话状态；写操作只展示确认卡片，不直接提交。 */
 const list=ref<Session[]>([]), active=ref<string>(), history=ref<Message[]>([]), draft=ref(''), pending=ref(false), thinking=ref(localStorage.getItem('agent-thinking')==='true'), error=ref(''), lastMessage=ref(''), lastUserMessageId=ref('');
 async function reload(){list.value=await sessions();} async function select(id:string){active.value=id;sessionStorage.setItem('agent-active-session',id);history.value=await messages(id);const last=history.value.at(-1);const retryUser=last?.status==='FAILED'?[...history.value].reverse().find(message=>message.role==='USER'):undefined;if(retryUser){lastMessage.value=retryUser.content;lastUserMessageId.value=retryUser.messageId;}} function create(){active.value=undefined;sessionStorage.removeItem('agent-active-session');history.value=[];error.value='';lastUserMessageId.value='';}
 function changeThinking(){localStorage.setItem('agent-thinking',String(thinking.value));}

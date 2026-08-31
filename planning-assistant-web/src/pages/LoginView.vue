@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'; import { request } from '../api';
+/** 创建浏览器登录请求并轮询小程序确认结果。 */
 const emit=defineEmits<{authenticated:[]}>(); const fallback=ref(''); const qrCodeUrl=ref(''); const fixedQrCodeUrl=ref(''); const loginError=ref(''); let timer:number|undefined;
 type Login={requestId:string;browserProof:string;mode:'DYNAMIC_QR'|'FALLBACK_CODE';fallbackCode?:string;fixedQrCodeUrl?:string;qrCodeUrl?:string;expiresAt:string}; let login:Login|undefined;
 async function create(){if(timer)clearInterval(timer);loginError.value='';fallback.value='';qrCodeUrl.value='';fixedQrCodeUrl.value='';try{login=await request<Login>('/api/web-auth/requests',{method:'POST'});fallback.value=login.fallbackCode||'';qrCodeUrl.value=login.qrCodeUrl||'';fixedQrCodeUrl.value=login.fixedQrCodeUrl||'';timer=window.setInterval(poll,1500);}catch{loginError.value='无法创建登录请求，请检查网络后重试。';}}

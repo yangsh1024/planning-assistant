@@ -3,6 +3,7 @@ package com.ysh.planning.common.exception;
 import lombok.Getter;
 
 @Getter
+/** 携带业务错误码的受控异常，由统一异常处理器转换为公开响应。 */
 public class BizException extends RuntimeException {
 
     private final int code;

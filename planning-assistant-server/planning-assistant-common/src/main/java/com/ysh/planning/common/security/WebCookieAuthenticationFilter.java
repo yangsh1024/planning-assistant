@@ -16,6 +16,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
+/** 从 HttpOnly Web Cookie 恢复浏览器身份，且不覆盖已有小程序认证结果。 */
 @Component
 @RequiredArgsConstructor
 public class WebCookieAuthenticationFilter extends OncePerRequestFilter {
@@ -25,6 +26,7 @@ public class WebCookieAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
+        // 优先保留已建立的认证，防止 Cookie 改变小程序接口的权限来源。
         if (SecurityContextHolder.getContext().getAuthentication() == null && request.getCookies() != null) {
             for (Cookie cookie : request.getCookies()) {
                 if (WEB_AUTH_COOKIE.equals(cookie.getName())) {

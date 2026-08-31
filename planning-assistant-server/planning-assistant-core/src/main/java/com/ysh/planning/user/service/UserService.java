@@ -24,6 +24,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.LocalDateTime;
 
+/** 处理微信登录、账户初始化和个人资料更新。 */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -46,6 +47,7 @@ public class UserService {
         }
 
         User user = userMapper.selectByOpenid(openid);
+        // 首次微信登录才创建账户，后续登录沿用既有资料。
         if (user == null) {
             user = new User();
             user.setOpenid(openid);

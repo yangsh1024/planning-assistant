@@ -20,6 +20,7 @@ import java.util.List;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+/** 识别小程序 Bearer JWT，并建立只适用于小程序接口的身份上下文。 */
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
@@ -29,6 +30,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String token = extractToken(request);
+        // 无效令牌不保留任何身份，后续权限规则会统一拒绝请求。
         if (StringUtils.hasText(token)) {
             try {
                 Long userId = jwtUtil.parseUserId(token);

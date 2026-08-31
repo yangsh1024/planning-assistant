@@ -1,4 +1,4 @@
-// pages/login/login.js
+/** 完成微信登录并在成功后持久化小程序身份与资料。 */
 const { post } = require('../../utils/request');
 
 Page({
@@ -7,7 +7,7 @@ Page({
   },
 
   onLoad() {
-    // If already logged in, go to home
+    // 已有令牌时直接进入首页，避免重复触发微信授权。
     const token = wx.getStorageSync('token');
     if (token) {
       wx.switchTab({ url: '/pages/home/home' });
@@ -43,6 +43,7 @@ Page({
   },
 
   _doLogin(code) {
+    // 登录成功后同时更新本地存储和全局状态，保证后续请求与页面一致。
     post('/user/login', { code })
       .then((data) => {
         // data = { token, userId, nickname, avatar }

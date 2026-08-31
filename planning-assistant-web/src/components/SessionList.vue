@@ -1,3 +1,3 @@
-<script setup lang="ts"> import type { Session } from '../api'; defineProps<{items:Session[]; active?:string}>(); defineEmits<{select:[id:string],create:[]}>(); </script>
+<script setup lang="ts"> import type { Session } from '../api'; /** 展示当前用户的历史会话并提供新建入口。 */ defineProps<{items:Session[]; active?:string}>(); defineEmits<{select:[id:string],create:[]}>(); </script>
 <template><aside><button class="new" @click="$emit('create')">+ 新建会话</button><button v-for="item in items" :key="item.sessionId" :class="{active:item.sessionId===active}" @click="$emit('select',item.sessionId)">{{ item.title }}</button></aside></template>
 <style scoped>aside{padding:16px;border-right:1px solid var(--border);background:#edf3ff;display:grid;gap:8px;align-content:start}button{border:0;background:transparent;padding:10px;text-align:left;border-radius:8px}.new{background:var(--primary);color:#fff;text-align:center}.active{background:#fff}</style>

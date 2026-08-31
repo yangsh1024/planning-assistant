@@ -29,6 +29,7 @@ import java.util.List;
 @RequestMapping("/api/expense")
 @RequiredArgsConstructor
 @Validated
+/** 暴露当前用户的开支录入、查询、统计和趋势接口。 */
 public class ExpenseController {
 
     private final ExpenseService expenseService;

@@ -13,6 +13,7 @@ const AVATAR_OPTIONS = [
   { key: 'cat-tabby', label: '虎斑', src: '/assets/images/avatars/cat-tabby.png' },
 ];
 
+/** 将未知头像回退到内置默认值，确保历史资料始终可正常展示。 */
 function normalizeAvatarKey(avatarKey) {
   return AVATAR_OPTIONS.some((item) => item.key === avatarKey) ? avatarKey : DEFAULT_AVATAR_KEY;
 }
@@ -21,6 +22,7 @@ function avatarSrc(avatarKey) {
   return AVATAR_OPTIONS.find((item) => item.key === normalizeAvatarKey(avatarKey)).src;
 }
 
+/** 展示和编辑个人资料，并提供浏览器登录短链的复制入口。 */
 Page({
   data: {
     userInfo: { nickname: '', avatar: DEFAULT_AVATAR_KEY },
@@ -82,6 +84,7 @@ Page({
   },
 
   copyWebLoginLink() {
+    // 短链由服务端设置时效和一次性消费，客户端只负责交给用户复制。
     post('/web-auth/miniapp-links', {})
       .then((result) => wx.setClipboardData({
         data: result.loginUrl,

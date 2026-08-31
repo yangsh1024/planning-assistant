@@ -1,4 +1,4 @@
-/** Shared date helpers. Year-month values always use yyyy-MM. */
+/** 统一生成和展示年月，保证接口交互固定使用 yyyy-MM。 */
 function formatYearMonth(year, month) {
   return `${year}-${String(month).padStart(2, '0')}`;
 }

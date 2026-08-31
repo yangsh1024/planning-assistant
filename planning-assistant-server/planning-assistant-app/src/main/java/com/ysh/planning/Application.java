@@ -9,6 +9,7 @@ import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServic
         scanBasePackages = "com.ysh.planning",
         exclude = UserDetailsServiceAutoConfiguration.class
 )
+/** 应用启动入口，统一装配账本各业务模块。 */
 @MapperScan("com.ysh.planning")
 public class Application {
 

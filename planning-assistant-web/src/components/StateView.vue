@@ -1,1 +1,1 @@
-<script setup lang="ts"> defineProps<{text:string}>(); </script><template><p class="state">{{ text }}</p></template><style scoped>.state{color:var(--muted);text-align:center;padding:32px}</style>
+<script setup lang="ts"> /** 统一显示空会话和加载失败等非内容状态。 */ defineProps<{text:string}>(); </script><template><p class="state">{{ text }}</p></template><style scoped>.state{color:var(--muted);text-align:center;padding:32px}</style>

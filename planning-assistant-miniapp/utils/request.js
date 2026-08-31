@@ -1,5 +1,5 @@
 /**
- * Unified HTTP request helper.
+ * 统一封装小程序接口调用，并集中处理认证失效和业务错误。
  *
  * API 根地址统一由 utils/config.js 提供。
  */
@@ -7,6 +7,11 @@
 const { API_BASE_URL } = require('./config');
 
 /**
+ * 发起账本 API 请求。
+ *
+ * 1. 读取身份
+ * 2. 发送请求
+ * 3. 统一失败
  * @param {object} options
  * @param {'GET'|'POST'|'PUT'|'DELETE'} options.method
  * @param {string}  options.url     Path relative to /api, e.g. '/expense'
@@ -42,7 +47,7 @@ function _realRequest(method, url, data) {
       success(res) {
         const body = res.data;
         if (res.statusCode === 401 || (body && body.code === 401)) {
-          // Token expired — redirect to login
+          // 清除失效身份并回到登录页，避免后续页面继续使用过期资料。
           wx.removeStorageSync('token');
           wx.reLaunch({ url: '/pages/login/login' });
           reject({ code: 401, message: '登录已过期，请重新登录' });

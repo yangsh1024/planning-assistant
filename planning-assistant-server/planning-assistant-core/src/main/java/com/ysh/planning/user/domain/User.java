@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 
 @Data
 @TableName("t_user")
+/** 保存小程序用户的账户资料与可展示昵称、头像。 */
 public class User {
 
     @TableId(type = IdType.AUTO)
