@@ -6,6 +6,10 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
+/**
+ * 保存 Agent 写意图从待确认到最终执行的审计状态。
+ * 目标指纹与幂等键用于阻止旧确认覆盖新账本数据或重复执行。
+ */
 @Data
 @TableName("t_agent_action_audit")
 public class AgentAction {

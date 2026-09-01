@@ -25,15 +25,16 @@ import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
 
+/** 暴露当前用户的开支录入、查询、统计和趋势接口。 */
 @RestController
 @RequestMapping("/api/expense")
 @RequiredArgsConstructor
 @Validated
-/** 暴露当前用户的开支录入、查询、统计和趋势接口。 */
 public class ExpenseController {
 
     private final ExpenseService expenseService;
 
+    /** 查询指定月份的开支，并支持分类筛选和分页。 */
     @GetMapping
     public Result<PageData<ExpenseDto>> list(
             @RequestParam String yearMonth,
@@ -43,28 +44,33 @@ public class ExpenseController {
         return Result.ok(expenseService.listByMonth(yearMonth, categoryId, page, pageSize));
     }
 
+    /** 新增当前用户的一笔开支。 */
     @PostMapping
     public Result<ExpenseDto> create(@Valid @RequestBody CreateExpenseRequest req) {
         return Result.ok(expenseService.create(req));
     }
 
+    /** 汇总指定月份按分类计算的开支统计。 */
     @GetMapping("/stats/{yearMonth}")
     public Result<ExpenseStatsDto> stats(@PathVariable String yearMonth) {
         return Result.ok(expenseService.statsByMonth(yearMonth));
     }
 
+    /** 查询最近若干个月的开支趋势。 */
     @GetMapping("/trend")
     public Result<List<TrendItemDto>> trend(
             @RequestParam(defaultValue = "6") @Min(1) @Max(24) int months) {
         return Result.ok(expenseService.trend(months));
     }
 
+    /** 更新当前用户拥有的开支记录。 */
     @PutMapping("/{expenseId}")
     public Result<ExpenseDto> update(@PathVariable Long expenseId,
                                       @Valid @RequestBody UpdateExpenseRequest req) {
         return Result.ok(expenseService.update(expenseId, req));
     }
 
+    /** 软删除当前用户拥有的开支记录。 */
     @DeleteMapping("/{expenseId}")
     public Result<Void> delete(@PathVariable Long expenseId) {
         expenseService.delete(expenseId);

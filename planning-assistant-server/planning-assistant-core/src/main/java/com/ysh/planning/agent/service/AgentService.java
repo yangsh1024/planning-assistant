@@ -140,7 +140,7 @@ public class AgentService {
                 emitter.complete();
             } catch (IllegalStateException ignored) {
             }
-            log.info("agent_request request_id={} session_id={} duration_ms={} status=FAILED input_tokens=0 output_tokens=0", requestId, session.getId(), elapsedMillis(startedAt));
+            log.warn("agent_request request_id={} session_id={} duration_ms={} status=FAILED cause={}", requestId, session.getId(), elapsedMillis(startedAt), e.getClass().getSimpleName());
         } finally {
             SecurityContextHolder.clearContext();
         }

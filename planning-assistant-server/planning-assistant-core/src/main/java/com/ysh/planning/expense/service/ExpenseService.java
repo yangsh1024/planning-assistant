@@ -20,6 +20,7 @@ import com.ysh.planning.expense.repository.ExpenseMapper;
 import com.ysh.planning.plan.domain.Category;
 import com.ysh.planning.plan.repository.CategoryMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -35,11 +36,20 @@ import java.util.stream.Collectors;
 /** 管理用户开支的归属校验、录入修改、软删除和统计转换。 */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ExpenseService {
 
     private final ExpenseMapper expenseMapper;
     private final CategoryMapper categoryMapper;
 
+    /**
+     * 新增一笔当前用户的开支记录。
+     * <ol><li>校验表单</li><li>确认科目</li><li>返回详情</li></ol>
+     *
+     * @param req 新开支的表单数据
+     * @return 已创建的开支详情
+     * @throws BizException 金额、日期或科目不符合规则时抛出
+     */
     public ExpenseDto create(CreateExpenseRequest req) {
         // 录入前同时校验金额、日期与可用科目，保持账本统计数据可信。
         Long userId = UserContext.currentUserId();
@@ -58,11 +68,21 @@ public class ExpenseService {
         expense.setCreatedAt(LocalDateTime.now());
         expense.setUpdatedAt(LocalDateTime.now());
         expenseMapper.insert(expense);
+        log.info("expense user_id={} expense_id={} category_id={} status=CREATED", userId, expense.getId(), expense.getCategoryId());
 
         ExpenseWithCategoryDto full = expenseMapper.selectWithCategoryById(expense.getId());
         return toDto(full);
     }
 
+    /**
+     * 更新当前用户的一笔未删除开支。
+     * <ol><li>确认归属</li><li>校验变更</li><li>返回详情</li></ol>
+     *
+     * @param expenseId 待编辑记录标识
+     * @param req 可更新的开支字段
+     * @return 更新后的开支详情
+     * @throws BizException 记录不存在、无权访问或字段无效时抛出
+     */
     public ExpenseDto update(Long expenseId, UpdateExpenseRequest req) {
         Long userId = UserContext.currentUserId();
         Expense expense = expenseMapper.selectOne(
@@ -90,11 +110,19 @@ public class ExpenseService {
         }
         expense.setUpdatedAt(LocalDateTime.now());
         expenseMapper.updateById(expense);
+        log.info("expense user_id={} expense_id={} category_id={} status=UPDATED", userId, expenseId, expense.getCategoryId());
 
         ExpenseWithCategoryDto full = expenseMapper.selectWithCategoryById(expenseId);
         return toDto(full);
     }
 
+    /**
+     * 软删除当前用户的一笔开支。
+     * <ol><li>确认归属</li><li>标记删除</li></ol>
+     *
+     * @param expenseId 待删除记录标识
+     * @throws BizException 记录不存在或不属于当前用户时抛出
+     */
     public void delete(Long expenseId) {
         // 使用软删除保留预算和历史报表所依赖的原始记录。
         Long userId = UserContext.currentUserId();
@@ -109,8 +137,17 @@ public class ExpenseService {
         expense.setIsDeleted(true);
         expense.setUpdatedAt(LocalDateTime.now());
         expenseMapper.updateById(expense);
+        log.info("expense user_id={} expense_id={} status=DELETED", userId, expenseId);
     }
 
+    /**
+     * 查询当前用户拥有的开支详情。
+     * <ol><li>限定用户</li><li>读取详情</li></ol>
+     *
+     * @param expenseId 记录标识
+     * @return 记录详情
+     * @throws BizException 记录不存在或不属于当前用户时抛出
+     */
     public ExpenseDto getById(Long expenseId) {
         Long userId = UserContext.currentUserId();
         ExpenseWithCategoryDto full = expenseMapper.selectOwnedWithCategoryById(expenseId, userId);
@@ -120,12 +157,30 @@ public class ExpenseService {
         return toDto(full);
     }
 
+    /**
+     * 在事务内读取当前用户的开支详情。
+     * <ol><li>锁定记录</li><li>转换详情</li></ol>
+     *
+     * @param expenseId 记录标识
+     * @return 可用于快照核验的记录详情
+     * @throws BizException 记录不存在或不属于当前用户时抛出
+     */
     public ExpenseDto getByIdForUpdate(Long expenseId) {
         ExpenseWithCategoryDto full = expenseMapper.selectOwnedByIdForUpdate(expenseId, UserContext.currentUserId());
         if (full == null) throw new BizException(ErrorCode.NOT_FOUND.getCode(), "记录不存在或不属于当前用户");
         return toDto(full);
     }
 
+    /**
+     * 分页查询指定月份的开支流水。
+     * <ol><li>校验月份</li><li>限定筛选</li><li>组装分页</li></ol>
+     *
+     * @param yearMonth 账单月份
+     * @param categoryId 可选科目筛选
+     * @param page 页码
+     * @param pageSize 每页条数
+     * @return 当页开支流水
+     */
     public PageData<ExpenseDto> listByMonth(String yearMonth, Long categoryId, int page, int pageSize) {
         Long userId = UserContext.currentUserId();
         validateYearMonth(yearMonth);
@@ -137,6 +192,13 @@ public class ExpenseService {
         return new PageData<>(total, page, pageSize, list);
     }
 
+    /**
+     * 按科目统计指定月份的实际开支。
+     * <ol><li>校验月份</li><li>汇总科目</li><li>计算日均</li></ol>
+     *
+     * @param yearMonth 账单月份
+     * @return 当月开支统计
+     */
     public ExpenseStatsDto statsByMonth(String yearMonth) {
         Long userId = UserContext.currentUserId();
         validateYearMonth(yearMonth);
@@ -174,6 +236,13 @@ public class ExpenseService {
         return dto;
     }
 
+    /**
+     * 返回截至当前月的连续开支趋势。
+     * <ol><li>补全月份</li><li>汇总支出</li><li>填充零值</li></ol>
+     *
+     * @param months 连续统计的月份数量
+     * @return 按月份连续排列的趋势数据
+     */
     public List<TrendItemDto> trend(int months) {
         Long userId = UserContext.currentUserId();
         YearMonth current = YearMonth.now();

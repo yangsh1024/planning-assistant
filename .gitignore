@@ -13,6 +13,7 @@ planning-assistant-miniapp/project.private.config.json
 .DS_Store
 
 # 运行期数据、日志和服务器私密配置
+.my-source/
 planning-assistant-server/uploads/
 logs/
 run/
@@ -20,6 +21,7 @@ conf/server.env
 *.log
 .env
 .env.*
+!planning-assistant-web/.env.development.local.example
 
 # Agent Web 构建产物
 planning-assistant-web/node_modules/

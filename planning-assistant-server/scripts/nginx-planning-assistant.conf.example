@@ -1,8 +1,9 @@
 # 放置位置示例：/etc/nginx/conf.d/planning-assistant.conf
-# 将 __API_DOMAIN__ 与证书路径替换为真实值后，再执行 nginx -t。
+# 将 __API_DOMAIN__、__BACKEND_UPSTREAM__ 与证书路径替换为真实值后，再执行 nginx -t。
+# __BACKEND_UPSTREAM__ 应使用本环境 server.env 的 SERVER_PORT，例如 127.0.0.1:18081。
 
 upstream planning_assistant_backend {
-    server 127.0.0.1:18081;
+    server __BACKEND_UPSTREAM__;
     keepalive 16;
 }
 

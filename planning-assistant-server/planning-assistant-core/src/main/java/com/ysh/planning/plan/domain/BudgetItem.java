@@ -7,9 +7,9 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 
+/** 表示月度预算方案中某一分类的额度与展示顺序。 */
 @Data
 @TableName("t_budget_item")
-/** 表示月度预算方案中某一分类的额度与展示顺序。 */
 public class BudgetItem {
 
     @TableId(type = IdType.AUTO)

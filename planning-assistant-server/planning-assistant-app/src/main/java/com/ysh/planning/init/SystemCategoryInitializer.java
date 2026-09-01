@@ -22,6 +22,16 @@ public class SystemCategoryInitializer implements ApplicationRunner {
 
     private final CategoryMapper categoryMapper;
 
+    /**
+     * 在应用启动后对齐数据库中的内置分类。
+     *
+     * <ol>
+     *     <li>软删除已废弃的分类。</li>
+     *     <li>补齐当前标准分类中缺失的项。</li>
+     * </ol>
+     *
+     * @param args 应用启动参数
+     */
     @Override
     public void run(ApplicationArguments args) {
         List<Category> existing = categoryMapper.selectList(

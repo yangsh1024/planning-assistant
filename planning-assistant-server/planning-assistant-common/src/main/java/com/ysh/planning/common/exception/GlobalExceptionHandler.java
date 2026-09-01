@@ -12,13 +12,15 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import jakarta.validation.ConstraintViolationException;
 import java.util.stream.Collectors;
 
+/** 将业务异常、参数校验异常和未预期异常转换为统一 REST 响应。 */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    /** 按业务错误码映射 HTTP 状态并返回受控失败响应。 */
     @ExceptionHandler(BizException.class)
     public ResponseEntity<Result<Void>> handleBiz(BizException e) {
-        log.warn("Business exception: code={}, message={}", e.getCode(), e.getMessage());
+        log.warn("business_failure error_code={}", e.getCode());
         HttpStatus status = switch (e.getCode()) {
             case 400 -> HttpStatus.BAD_REQUEST;
             case 401 -> HttpStatus.UNAUTHORIZED;
@@ -32,24 +34,27 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(Result.fail(e.getCode(), e.getMessage()));
     }
 
+    /** 汇总请求体字段校验错误。 */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Result<Void>> handleValidation(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldErrors().stream()
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.joining("; "));
-        log.warn("Validation exception: {}", message);
+        log.warn("validation_failure field_count={}", e.getBindingResult().getFieldErrorCount());
         return ResponseEntity.badRequest().body(Result.fail(400, message));
     }
 
+    /** 处理路径和查询参数的约束校验错误。 */
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<Result<Void>> handleConstraintViolation(ConstraintViolationException e) {
-        log.warn("Constraint violation: {}", e.getMessage());
+        log.warn("constraint_violation violation_count={}", e.getConstraintViolations().size());
         return ResponseEntity.badRequest().body(Result.fail(400, "请求参数不合法"));
     }
 
+    /** 记录未处理异常，并隐藏内部错误细节。 */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Result<Void>> handleGeneral(Exception e) {
-        log.error("Unexpected exception", e);
+        log.error("unhandled_exception type={}", e.getClass().getSimpleName(), e);
         return ResponseEntity.internalServerError()
                 .body(Result.fail(500, "服务内部错误"));
     }

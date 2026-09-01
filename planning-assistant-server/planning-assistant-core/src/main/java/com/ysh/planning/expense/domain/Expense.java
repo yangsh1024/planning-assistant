@@ -9,9 +9,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/** 记录用户的一笔实际开支，是统计和预算执行情况的原始依据。 */
 @Data
 @TableName("t_expense")
-/** 记录用户的一笔实际开支，是统计和预算执行情况的原始依据。 */
 public class Expense {
 
     @TableId(type = IdType.AUTO)

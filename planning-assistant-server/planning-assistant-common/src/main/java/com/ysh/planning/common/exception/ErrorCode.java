@@ -2,8 +2,8 @@ package com.ysh.planning.common.exception;
 
 import lombok.Getter;
 
-@Getter
 /** 定义客户端可识别的通用业务失败类别。 */
+@Getter
 public enum ErrorCode {
 
     PARAM_ERROR(400, "参数错误"),

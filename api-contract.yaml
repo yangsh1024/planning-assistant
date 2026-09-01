@@ -439,20 +439,14 @@ components:
 
     WebLoginRequest:
       type: object
-      required: [requestId, browserProof, mode, expiresAt]
+      required: [requestId, browserProof, mode, loginCode, fixedQrCodeUrl, expiresAt]
       properties:
         requestId: { type: string }
         browserProof: { type: string, description: 仅浏览器持有的交换凭据 }
-        mode: { type: string, enum: [DYNAMIC_QR, FALLBACK_CODE] }
-        fallbackCode: { type: string, pattern: '^\\d{6}$', nullable: true }
-        fixedQrCodeUrl: { type: string, format: uri, nullable: true, description: 固定小程序码图片地址，回退模式使用 }
-        qrCodeUrl: { type: string, format: uri, nullable: true }
+        mode: { type: string, enum: [FIXED_QR_CODE] }
+        loginCode: { type: string, pattern: '^\\d{6}$', description: 本次网页登录的六位数字码，仅展示给当前浏览器 }
+        fixedQrCodeUrl: { type: string, format: uri, description: 固定小程序码图片地址，指向网页登录确认页 }
         expiresAt: { type: string, format: date-time }
-      oneOf:
-        - required: [qrCodeUrl]
-          properties: { mode: { enum: [DYNAMIC_QR] }, fallbackCode: { nullable: true } }
-        - required: [fallbackCode, fixedQrCodeUrl]
-          properties: { mode: { enum: [FALLBACK_CODE] }, qrCodeUrl: { nullable: true } }
     WebLoginStatus:
       type: object
       required: [requestId, deviceLabel, status, expiresAt]
@@ -461,16 +455,16 @@ components:
         deviceLabel: { type: string }
         status: { type: string, enum: [PENDING, APPROVED, REJECTED, EXPIRED, CONSUMED] }
         expiresAt: { type: string, format: date-time }
-    FallbackCodeRequest:
-      type: object
-      required: [fallbackCode]
-      properties:
-        fallbackCode: { type: string, pattern: '^\d{6}$' }
     BrowserProofRequest:
       type: object
       required: [browserProof]
       properties:
         browserProof: { type: string, minLength: 1, description: 仅创建请求的浏览器持有 }
+    LoginCodeRequest:
+      type: object
+      required: [loginCode]
+      properties:
+        loginCode: { type: string, pattern: '^\\d{6}$' }
     SsoExchangeRequest:
       type: object
       required: [ticket]
@@ -524,13 +518,12 @@ paths:
     post:
       tags: [Web 登录]
       security: []
-      summary: 创建电脑端网页登录请求（动态码或固定码兜底）
+      summary: 创建电脑端固定小程序码登录请求
       description: |
-        创建 2 分钟有效、单次使用的网页登录请求。动态小程序码可用时返回 DYNAMIC_QR 模式；
-        不可用时返回 FALLBACK_CODE 模式，浏览器同时展示固定小程序码和六位登录码。
+        创建 2 分钟有效、单次使用的网页登录请求，返回固定小程序码图片地址与本次六位登录码。
       responses:
         '200':
-          description: 成功；动态码与固定码字段互斥
+          description: 成功
           content:
             application/json:
               schema:
@@ -539,8 +532,7 @@ paths:
                   - type: object
                     properties:
                       data: { $ref: '#/components/schemas/WebLoginRequest' }
-        '429': { description: 创建过于频繁 }
-        '503': { description: 固定码配置缺失或暂时无法分配登录码 }
+        '503': { description: 固定小程序码未配置或暂时无法分配登录码 }
   /web-auth/requests/{requestId}/status:
     get:
       tags: [Web 登录]
@@ -559,13 +551,24 @@ paths:
                     properties:
                       data: { $ref: '#/components/schemas/WebLoginStatus' }
         '404': { description: 请求不存在或浏览器凭据错误 }
-  /web-auth/requests/{requestId}/qr:
-    get:
+  /web-auth/login-codes/resolve:
+    post:
       tags: [Web 登录]
-      security: []
-      summary: 获取动态小程序码
-      parameters: [{ $ref: '#/components/parameters/WebLoginRequestId' }]
-      responses: { '200': { description: PNG 图片, content: { image/png: { schema: { type: string, format: binary } } } } }
+      summary: 小程序通过六位登录码获取待确认请求
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/LoginCodeRequest' } } } }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Result'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/WebLoginStatus' }
+        '404': { description: 登录码不存在或已失效 }
+        '429': { description: 登录码尝试过于频繁 }
   /web-auth/requests/{requestId}/preview:
     get:
       tags: [Web 登录]
@@ -605,24 +608,6 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Result' }
-  /web-auth/fallback/resolve:
-    post:
-      tags: [Web 登录]
-      summary: 小程序通过六位码解析登录请求
-      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/FallbackCodeRequest' } } } }
-      responses:
-        '200':
-          description: 成功
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/Result'
-                  - type: object
-                    properties:
-                      data: { $ref: '#/components/schemas/WebLoginStatus' }
-        '404': { description: 登录码不存在或已失效 }
-        '429': { description: 尝试过于频繁 }
   /web-auth/miniapp-links:
     post:
       tags: [Web 登录]

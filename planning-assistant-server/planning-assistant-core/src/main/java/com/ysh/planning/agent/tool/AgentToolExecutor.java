@@ -15,12 +15,12 @@ import com.ysh.planning.common.validation.MoneyValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-@Component
-@RequiredArgsConstructor
 /**
  * 执行模型允许调用的账本工具，并把写入请求转换为确认卡片。
  * 所有工具参数先由服务端复核，模型输出不能直接越过现有业务校验。
  */
+@Component
+@RequiredArgsConstructor
 public class AgentToolExecutor {
     private final PlanService planService;
     private final ExpenseService expenseService;
@@ -66,6 +66,14 @@ public class AgentToolExecutor {
         }
     }
 
+    /**
+     * 验证工具参数只包含声明过的字段。
+     * <ol><li>校验对象</li><li>限制字段</li><li>校验明细</li></ol>
+     *
+     * @param name 工具名称
+     * @param args 模型提供的参数对象
+     * @throws BizException 参数结构或字段不符合工具契约时抛出
+     */
     private void validateShape(String name, JsonNode args) {
         if (args == null || !args.isObject())
             throw new BizException(ErrorCode.PARAM_ERROR.getCode(), "工具参数必须是对象");
@@ -96,6 +104,17 @@ public class AgentToolExecutor {
         }
     }
 
+    /**
+     * 生成已通过常规业务校验的确认卡片。
+     * <ol><li>校验意图</li><li>生成摘要</li><li>保存确认</li></ol>
+     *
+     * @param sessionId 当前会话标识
+     * @param type 写操作类型
+     * @param summary 模型提供的回退摘要
+     * @param args 已解析的工具参数
+     * @return 待用户确认的动作
+     * @throws BizException 数据不符合既有账本规则时抛出
+     */
     // 复用业务规则校验，确认卡片必须与常规入口接受同一份合法数据。
     private AgentActionDto pending(String sessionId, String type, String summary, JsonNode args) {
         validatePending(type, args);

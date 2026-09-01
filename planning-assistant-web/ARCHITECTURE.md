@@ -29,9 +29,13 @@ src/
 
 ## 登录与运行方式
 
-Web 不复用小程序 `wx.login()` 或 Bearer Token。小程序确认或短链交换为 HttpOnly Web Cookie；前端使用 `credentials: 'same-origin'`，从同域 XSRF Cookie 读取 Token 并为非 GET 请求添加 `X-CSRF-TOKEN`。运行：`npm install && npm run dev`；验证：`npm run build`。
+Web 不复用小程序 `wx.login()` 或 Bearer Token。小程序确认或短链交换为 HttpOnly Web Cookie；前端使用 `credentials: 'same-origin'`，从同域 XSRF Cookie 读取 Token 并为非 GET 请求添加 `X-CSRF-TOKEN`。
 
-浏览器不能调用小程序 `wx.login()`，因此不复用 `POST /api/user/login`。电脑端优先展示动态小程序码；未完成真机验证或能力不可用时展示运维配置的固定小程序码与六位登录码。
+本地运行前，将 `.env.development.local.example` 复制为 `.env.development.local` 并填写 `VITE_API_PROXY_TARGET`；后者已被 Git 忽略。随后执行 `npm install && npm run dev`，Vite 会将 `/api` 转发至该地址。
+
+构建命令为 `npm run build:test`（测试）和 `npm run build:prod`（生产；`npm run build` 等价于生产模式）。两类静态包的 API 均保持相对路径 `/api`，不写入后端绝对地址。部署时将 `dist` 放入对应环境的同域 Nginx，由 Nginx 的 `/api/` 反向代理到该环境的后端；因此浏览器 Cookie、CSRF 与 SSE 均维持同源。
+
+浏览器不能调用小程序 `wx.login()`，因此不复用 `POST /api/user/login`。电脑端展示固定小程序码和本次六位登录码；用户扫码进入小程序确认页、输入六码后确认登录。
 
 个人主体手机端由已登录小程序复制一次性短链，用户自行粘贴到浏览器打开；不依赖 `web-view`、URL Link 或 URL Scheme，也不承诺小程序自动打开系统浏览器。一次性票据位于 URL fragment，链接不包含长期 JWT；Web 以 POST 交换 Cookie 后立即从地址栏清除 fragment。
 

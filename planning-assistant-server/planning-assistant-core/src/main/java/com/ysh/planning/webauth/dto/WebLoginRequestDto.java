@@ -8,8 +8,7 @@ public class WebLoginRequestDto {
     private String requestId;
     private String browserProof;
     private String mode;
-    private String fallbackCode;
+    private String loginCode;
     private String fixedQrCodeUrl;
-    private String qrCodeUrl;
     private LocalDateTime expiresAt;
 }

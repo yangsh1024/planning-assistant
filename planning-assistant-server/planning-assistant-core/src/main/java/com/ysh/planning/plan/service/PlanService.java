@@ -20,6 +20,7 @@ import com.ysh.planning.plan.repository.BudgetItemMapper;
 import com.ysh.planning.plan.repository.BudgetPlanMapper;
 import com.ysh.planning.plan.repository.CategoryMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +38,7 @@ import java.util.stream.Collectors;
 /** 保存月度预算并汇总实际开支，生成每个分类的预算执行结果。 */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PlanService {
 
     private final BudgetPlanMapper budgetPlanMapper;
@@ -44,6 +46,15 @@ public class PlanService {
     private final CategoryMapper categoryMapper;
     private final ExpenseMapper expenseMapper;
 
+    /**
+     * 覆盖保存指定月份的完整预算方案。
+     * <ol><li>校验方案</li><li>替换旧计划</li><li>返回汇总</li></ol>
+     *
+     * @param yearMonth 目标预算月份
+     * @param req 完整预算科目配置
+     * @return 保存后的预算详情
+     * @throws BizException 月份、金额、科目或排序不符合规则时抛出
+     */
     @Transactional
     public BudgetPlanDto savePlan(String yearMonth, SaveBudgetPlanRequest req) {
         // 整月计划以完整替换保存，先验证所有分类避免写入半成品方案。
@@ -96,14 +107,29 @@ public class PlanService {
             items.add(item);
         }
         items.forEach(budgetItemMapper::insert);
+        log.info("budget_plan user_id={} year_month={} item_count={} status=SAVED", userId, yearMonth, items.size());
 
         return buildPlanDto(yearMonth, nameMap, items);
     }
 
+    /**
+     * 判断当前用户是否曾保存预算。
+     * <ol><li>限定用户</li><li>统计计划</li></ol>
+     *
+     * @return 存在任意月份预算时为 {@code true}
+     */
     public boolean hasAnyPlan() {
         return budgetPlanMapper.countByUserId(UserContext.currentUserId()) > 0;
     }
 
+    /**
+     * 查询指定月份的预算配置。
+     * <ol><li>校验月份</li><li>读取计划</li><li>规范金额</li></ol>
+     *
+     * @param yearMonth 目标预算月份
+     * @return 预算详情；尚未设置时为 {@code null}
+     * @throws BizException 月份格式无效或晚于当前月时抛出
+     */
     public BudgetPlanDto getPlan(String yearMonth) {
         Long userId = UserContext.currentUserId();
         validateYearMonth(yearMonth);
@@ -134,12 +160,27 @@ public class PlanService {
         return dto;
     }
 
+    /**
+     * 在事务内读取可用于快照核验的预算。
+     * <ol><li>校验月份</li><li>锁定计划</li><li>返回详情</li></ol>
+     *
+     * @param yearMonth 目标预算月份
+     * @return 当前预算详情；尚未设置时为 {@code null}
+     */
     public BudgetPlanDto getPlanForUpdate(String yearMonth) {
         validateYearMonth(yearMonth);
         budgetPlanMapper.selectByUserIdAndYearMonthForUpdate(UserContext.currentUserId(), yearMonth);
         return getPlan(yearMonth);
     }
 
+    /**
+     * 汇总指定月份的预算执行情况。
+     * <ol><li>读取预算</li><li>归集支出</li><li>补齐科目</li></ol>
+     *
+     * @param yearMonth 目标统计月份
+     * @return 预算与实际开支汇总
+     * @throws BizException 月份格式无效或晚于当前月时抛出
+     */
     public BudgetSummaryDto getSummary(String yearMonth) {
         Long userId = UserContext.currentUserId();
         validateYearMonth(yearMonth);
@@ -188,6 +229,7 @@ public class PlanService {
             totalActual = totalActual.add(actual);
         }
 
+        // 未设预算的实际开支仍需保留，避免汇总数字与科目列表不一致。
         for (ExpenseStatRawDto stat : stats) {
             if (budgetMap.containsKey(stat.getCategoryId())) {
                 continue;

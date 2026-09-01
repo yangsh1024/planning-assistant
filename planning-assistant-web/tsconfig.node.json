@@ -1,1 +1,14 @@
-{ "compilerOptions": { "composite": true, "module": "ESNext", "moduleResolution": "Bundler" }, "include": ["vite.config.ts"] }
+{
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": true,
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["node"],
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  },
+  "include": ["vite.config.ts", "src/config/apiProxy.ts"]
+}

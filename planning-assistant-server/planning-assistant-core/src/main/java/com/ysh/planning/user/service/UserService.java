@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ysh.planning.common.exception.BizException;
 import com.ysh.planning.common.exception.ErrorCode;
+import com.ysh.planning.common.logging.SafeLogException;
 import com.ysh.planning.common.security.JwtUtil;
 import com.ysh.planning.common.security.UserContext;
 import com.ysh.planning.user.domain.AvatarCatalog;
@@ -40,6 +41,14 @@ public class UserService {
     @Value("${wechat.secret}")
     private String wechatSecret;
 
+    /**
+     * 使用微信登录码完成登录或首次注册。
+     * <ol><li>换取身份</li><li>创建用户</li><li>签发 JWT</li></ol>
+     *
+     * @param req 微信登录请求
+     * @return 当前用户的登录信息
+     * @throws BizException 登录码无法换取有效身份时抛出
+     */
     public LoginResponse login(LoginRequest req) {
         String openid = resolveOpenid(req.getCode());
         if (!StringUtils.hasText(openid)) {
@@ -48,23 +57,41 @@ public class UserService {
 
         User user = userMapper.selectByOpenid(openid);
         // 首次微信登录才创建账户，后续登录沿用既有资料。
-        if (user == null) {
+        boolean created = user == null;
+        if (created) {
             user = new User();
             user.setOpenid(openid);
             user.setNickname("用户" + openid.substring(Math.max(0, openid.length() - 6)));
             user.setAvatar(AvatarCatalog.DEFAULT_AVATAR_KEY);
             user.setCreatedAt(LocalDateTime.now());
             userMapper.insert(user);
+            log.info("user_account user_id={} status=CREATED", user.getId());
         }
 
         String token = jwtUtil.generateToken(user.getId());
+        log.info("user_login user_id={} created={}", user.getId(), created);
         return new LoginResponse(token, user.getId(), user.getNickname(), user.getAvatar());
     }
 
+    /**
+     * 获取当前用户资料。
+     * <ol><li>确认登录</li><li>转换资料</li></ol>
+     *
+     * @return 当前用户资料
+     * @throws BizException 登录态已失效时抛出
+     */
     public UserProfileDto getProfile() {
         return toDto(currentUser());
     }
 
+    /**
+     * 更新当前用户的昵称和内置头像。
+     * <ol><li>确认登录</li><li>校验头像</li><li>返回资料</li></ol>
+     *
+     * @param req 待更新的资料字段
+     * @return 更新后的用户资料
+     * @throws BizException 头像不在内置目录或登录态失效时抛出
+     */
     public UserProfileDto updateProfile(UpdateProfileRequest req) {
         Long userId = UserContext.currentUserId();
         User user = currentUser();
@@ -87,12 +114,21 @@ public class UserService {
         if (hasUpdate) {
             userMapper.update(null, wrapper);
             user = userMapper.selectById(userId);
+            log.info("user_profile user_id={} status=UPDATED", userId);
         }
 
         return toDto(user);
     }
 
+    /**
+     * 用微信临时登录码换取 OpenID。
+     * <ol><li>请求微信</li><li>读取身份</li><li>屏蔽失败</li></ol>
+     *
+     * @param code 微信临时登录码
+     * @return 有效 OpenID；换取失败时为 {@code null}
+     */
     private String resolveOpenid(String code) {
+        long startedAt = System.nanoTime();
         try {
             String url = UriComponentsBuilder
                     .fromHttpUrl("https://api.weixin.qq.com/sns/jscode2session")
@@ -106,21 +142,26 @@ public class UserService {
             RestTemplate restTemplate = new RestTemplate();
             String response = restTemplate.getForObject(url, String.class);
             if (!StringUtils.hasText(response)) {
-                log.warn("WeChat code2session returned an empty response");
+                log.warn("wechat_code2session status=EMPTY_RESPONSE duration_ms={}", elapsedMillis(startedAt));
                 return null;
             }
             JsonNode result = objectMapper.readTree(response);
             if (result.hasNonNull("openid")) {
+                log.info("wechat_code2session status=SUCCEEDED duration_ms={}", elapsedMillis(startedAt));
                 return result.get("openid").asText();
             }
-            log.warn("WeChat code2session failed: errcode={}, errmsg={}",
-                    result.path("errcode").asText("unknown"),
-                    result.path("errmsg").asText("unknown"));
+            log.warn("wechat_code2session status=REJECTED error_code={} duration_ms={}",
+                    result.path("errcode").asText("unknown"), elapsedMillis(startedAt));
             return null;
         } catch (Exception e) {
-            log.error("WeChat code2session error", e);
+            log.error("wechat_code2session status=FAILED duration_ms={} failure_category={}",
+                    elapsedMillis(startedAt), e.getClass().getSimpleName(), SafeLogException.from(e));
             return null;
         }
+    }
+
+    private long elapsedMillis(long startedAt) {
+        return (System.nanoTime() - startedAt) / 1_000_000L;
     }
 
     private UserProfileDto toDto(User user) {

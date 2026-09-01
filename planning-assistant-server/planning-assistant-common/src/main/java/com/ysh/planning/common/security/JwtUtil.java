@@ -60,6 +60,13 @@ public class JwtUtil {
         return Long.parseLong(claims.getSubject());
     }
 
+    /**
+     * 签发仅用于浏览器 Cookie 的短期 JWT。
+     * <ol><li>标记用途</li><li>设置期限</li><li>完成签名</li></ol>
+     *
+     * @param userId 已认证用户标识
+     * @return Web Cookie 承载的 JWT
+     */
     public String generateWebToken(Long userId) {
         return Jwts.builder()
                 .subject(userId.toString())
@@ -70,6 +77,14 @@ public class JwtUtil {
                 .compact();
     }
 
+    /**
+     * 解析并校验浏览器用途的 JWT。
+     * <ol><li>验签解析</li><li>核对用途</li><li>返回用户</li></ol>
+     *
+     * @param token Web Cookie 中的 JWT
+     * @return 令牌中的用户标识
+     * @throws JwtException 令牌无效、过期或用途错误时抛出
+     */
     public Long parseWebUserId(String token) throws JwtException {
         Claims claims = Jwts.parser().verifyWith(getKey()).build()
                 .parseSignedClaims(token).getPayload();
@@ -79,6 +94,12 @@ public class JwtUtil {
         return Long.parseLong(claims.getSubject());
     }
 
+    /**
+     * 将配置密钥转换为签名密钥。
+     * <ol><li>解码配置</li><li>构造密钥</li></ol>
+     *
+     * @return 用于 JWT 签名和验签的密钥
+     */
     private SecretKey getKey() {
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
     }

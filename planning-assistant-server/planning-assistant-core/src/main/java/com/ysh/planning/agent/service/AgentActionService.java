@@ -20,6 +20,7 @@ import com.ysh.planning.plan.dto.SaveBudgetPlanRequest;
 import com.ysh.planning.plan.service.CategoryService;
 import com.ysh.planning.plan.service.PlanService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -29,12 +30,13 @@ import java.time.LocalDateTime;
 import java.util.HexFormat;
 import java.util.UUID;
 
-@Service
-@RequiredArgsConstructor
 /**
  * 管理 Agent 写操作从确认卡片到最终执行的状态流转。
  * 在执行前核验目标快照，避免用户确认旧数据后覆盖账本的新变化。
  */
+@Service
+@RequiredArgsConstructor
+@Slf4j
 public class AgentActionService {
     private final AgentActionMapper actionMapper;
     private final ExpenseService expenseService;
@@ -61,6 +63,7 @@ public class AgentActionService {
         action.setTargetFingerprint(fingerprintTarget(type, payload)); action.setIdempotencyKey(UUID.randomUUID().toString());
         action.setStatus("PENDING_CONFIRMATION"); action.setExpiresAt(LocalDateTime.now().plusMinutes(10));
         action.setCreatedAt(LocalDateTime.now()); action.setUpdatedAt(LocalDateTime.now()); actionMapper.insert(action);
+        log.info("agent_action action_id={} session_id={} user_id={} type={} status=PENDING_CONFIRMATION", action.getId(), sessionId, userId, type);
         return toDto(action);
     }
 
@@ -79,10 +82,19 @@ public class AgentActionService {
             String message = cause instanceof BizException ? cause.getMessage() : "操作执行失败，请稍后重试";
             String result = objectMapper.createObjectNode().put("message", message).toString();
             actionMapper.failPending(actionId, userId, result);
+            log.warn("agent_action action_id={} user_id={} status=FAILED cause={}", actionId, userId, cause.getClass().getSimpleName());
             return toDto(requireOwned(actionId, userId));
         }
     }
 
+    /**
+     * 在同一事务内抢占并执行确认操作。
+     * <ol><li>核验状态</li><li>抢占操作</li><li>比对快照</li></ol>
+     *
+     * @param actionId 待确认操作标识
+     * @param userId 当前用户标识
+     * @return 操作的最终状态
+     */
     private AgentActionDto confirmInTransaction(String actionId, Long userId) {
         AgentAction action = requireOwned(actionId, userId); LocalDateTime now = LocalDateTime.now();
         if (!AgentActionPolicy.canConfirm(action.getStatus(), action.getExpiresAt(), now)) {
@@ -101,14 +113,18 @@ public class AgentActionService {
         catch (BizException e) { currentFingerprint = null; }
         // 对可变目标重新取锁内快照，账本变化后不执行用户基于旧内容作出的确认。
         if (action.getTargetFingerprint() != null && !action.getTargetFingerprint().equals(currentFingerprint)) {
-            action.setStatus("STALE"); action.setUpdatedAt(now); actionMapper.updateById(action); return toDto(action);
+            action.setStatus("STALE"); action.setUpdatedAt(now); actionMapper.updateById(action);
+            log.info("agent_action action_id={} user_id={} status=STALE", actionId, userId);
+            return toDto(action);
         }
         try {
             // 只有通过确认和快照校验的意图才会调用实际写入服务。
             Object result = execute(action.getActionType(), payload);
             action.setStatus("EXECUTED"); action.setResultJson(objectMapper.writeValueAsString(result));
         } catch (Exception e) { throw new ActionExecutionException(e); }
-        action.setUpdatedAt(LocalDateTime.now()); actionMapper.updateById(action); return toDto(action);
+        action.setUpdatedAt(LocalDateTime.now()); actionMapper.updateById(action);
+        log.info("agent_action action_id={} user_id={} type={} status=EXECUTED", actionId, userId, action.getActionType());
+        return toDto(action);
     }
 
     /**
@@ -122,6 +138,7 @@ public class AgentActionService {
         Long userId = UserContext.currentUserId(); AgentAction action = requireOwned(actionId, userId);
         if ("PENDING_CONFIRMATION".equals(action.getStatus())) {
             if (actionMapper.cancel(actionId, userId) != 1) actionMapper.expirePending(actionId, userId, LocalDateTime.now());
+            log.info("agent_action action_id={} user_id={} status=CANCELLED_OR_EXPIRED", actionId, userId);
         }
         return toDto(requireOwned(actionId, userId));
     }
@@ -142,6 +159,15 @@ public class AgentActionService {
         return toDto(action);
     }
 
+    /**
+     * 执行已通过确认校验的账本意图。
+     * <ol><li>识别类型</li><li>转换数据</li><li>调用服务</li></ol>
+     *
+     * @param type 已登记的动作类型
+     * @param payload 经确认的动作数据
+     * @return 原有账本服务的执行结果
+     * @throws Exception 动作数据无法转换或服务执行失败时抛出
+     */
     private Object execute(String type, JsonNode payload) throws Exception {
         return switch (type) {
             case "CREATE_EXPENSE" -> expenseService.create(objectMapper.treeToValue(payload, CreateExpenseRequest.class));

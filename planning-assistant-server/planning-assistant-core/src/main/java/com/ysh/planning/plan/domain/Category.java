@@ -7,9 +7,9 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
+/** 表示内置或用户自定义的记账分类，并保留软删除状态供历史数据使用。 */
 @Data
 @TableName("t_category")
-/** 表示内置或用户自定义的记账分类，并保留软删除状态供历史数据使用。 */
 public class Category {
 
     @TableId(type = IdType.AUTO)

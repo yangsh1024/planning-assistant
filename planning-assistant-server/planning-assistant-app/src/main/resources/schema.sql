@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS t_expense
 
 CREATE TABLE IF NOT EXISTS t_web_login_request (
     id VARCHAR(36) PRIMARY KEY, user_id BIGINT NULL, browser_proof_hash CHAR(64) NOT NULL,
-    fallback_code_hash CHAR(64) NULL, device_label VARCHAR(80) NOT NULL, status VARCHAR(16) NOT NULL,
+    fallback_code_hash CHAR(64) NULL COMMENT '六位登录码 SHA-256 摘要（列名为历史兼容）', device_label VARCHAR(80) NOT NULL, status VARCHAR(16) NOT NULL,
     expires_at DATETIME NOT NULL, created_at DATETIME NOT NULL,
     UNIQUE KEY uk_web_fallback_code_hash (fallback_code_hash), INDEX idx_web_login_expiry (expires_at)
 ) COMMENT '网页登录请求';

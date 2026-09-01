@@ -1,1 +1,17 @@
-<view class="page"><view wx:if="{{loading}}">正在加载登录信息…</view><block wx:else><text class="title">确认网页登录</text><block wx:if="{{requestId}}"><text class="device">{{deviceLabel}}</text><text class="tip">确认后，电脑浏览器将进入 Agent 对话页面。</text><button class="primary" bindtap="approve">确认登录</button><button bindtap="reject">取消</button></block><view class="divider">其他登录方式</view><button bindtap="scanWebLogin">扫描电脑端登录码</button><input maxlength="6" type="number" placeholder="或输入六位登录码" bindinput="inputCode"/><button bindtap="resolveCode">继续</button></block></view>
+<view class="page">
+  <view wx:if="{{loading}}">正在加载登录信息…</view>
+  <block wx:else>
+    <text class="title">确认网页登录</text>
+    <block wx:if="{{requestId}}">
+      <text class="device">{{deviceLabel}}</text>
+      <text class="tip">确认后，电脑浏览器将进入 Agent 对话页面。</text>
+      <button class="primary" bindtap="approve">确认登录</button>
+      <button bindtap="reject">取消</button>
+    </block>
+    <block wx:else>
+      <text class="tip">请在电脑端查看并输入六位登录码。</text>
+      <input maxlength="6" type="number" placeholder="请输入六位登录码" bindinput="inputLoginCode" />
+      <button class="primary" bindtap="resolveLoginCode">继续</button>
+    </block>
+  </block>
+</view>

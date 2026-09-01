@@ -6,6 +6,9 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 限制单个小程序用户猜测网页登录码的频率。
+ */
 @Component
 public class WebLoginAttemptLimiter {
     private static final int ATTEMPTS_PER_MINUTE = 10;
@@ -18,5 +21,6 @@ public class WebLoginAttemptLimiter {
         return updated.count <= ATTEMPTS_PER_MINUTE;
     }
 
-    private record Window(Instant minute, int count) { }
+    private record Window(Instant minute, int count) {
+    }
 }

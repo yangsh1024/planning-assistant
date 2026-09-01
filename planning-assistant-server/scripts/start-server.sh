@@ -24,13 +24,16 @@ require_env() {
   fi
 }
 
-for name in APP_HOME JAR_FILE RUN_DIR LOG_DIR DB_URL DB_USERNAME DB_PASSWORD WECHAT_APPID WECHAT_SECRET JWT_SECRET DEEPSEEK_API_KEY APP_PUBLIC_BASE_URL; do
+for name in APP_HOME JAR_FILE RUN_DIR LOG_DIR DB_URL DB_USERNAME DB_PASSWORD WECHAT_APPID WECHAT_SECRET JWT_SECRET DEEPSEEK_API_KEY APP_PUBLIC_BASE_URL APP_FIXED_QR_URL; do
   require_env "$name"
 done
 
-if [[ ${WECHAT_DYNAMIC_QR_ENABLED:-false} != true ]]; then
-  require_env WECHAT_FIXED_QR_URL
+SERVER_PORT=${SERVER_PORT:-8080}
+if ! [[ $SERVER_PORT =~ ^[1-9][0-9]{0,4}$ ]] || (( SERVER_PORT > 65535 )); then
+  echo "SERVER_PORT 必须是 1 到 65535 的整数，当前值：$SERVER_PORT" >&2
+  exit 1
 fi
+export SERVER_PORT
 
 JAVA_CMD=${JAVA_HOME:+"$JAVA_HOME/bin/java"}
 JAVA_CMD=${JAVA_CMD:-$(command -v java || true)}
@@ -48,6 +51,16 @@ fi
 if [[ ! -f "$JAR_FILE" ]]; then
   echo "未找到应用 JAR：$JAR_FILE" >&2
   exit 1
+fi
+
+if [[ ${1:-} == "--check" ]]; then
+  echo "环境检查通过："
+  echo "  环境文件：$ENV_FILE"
+  echo "  端口：$SERVER_PORT"
+  echo "  固定小程序码：已配置"
+  echo "  JDK：$JAVA_CMD"
+  echo "  JAR：$JAR_FILE"
+  exit 0
 fi
 
 mkdir -p "$RUN_DIR" "$LOG_DIR"

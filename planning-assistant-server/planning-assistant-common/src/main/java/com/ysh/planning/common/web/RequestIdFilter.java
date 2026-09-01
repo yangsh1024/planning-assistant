@@ -13,13 +13,26 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.UUID;
 
+/**
+ * 为每个请求生成可回传的追踪标识，关联接口响应和异步日志。
+ * 请求结束后立即清理线程上下文，避免线程复用时串联不同请求的日志。
+ */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
-/** 为每个请求生成可回传的追踪标识，关联接口响应和异步日志。 */
 public class RequestIdFilter extends OncePerRequestFilter {
     public static final String HEADER = "X-Request-ID";
     public static final String MDC_KEY = "requestId";
 
+    /**
+     * 在请求全程建立并清理追踪标识。
+     * <ol><li>生成标识</li><li>绑定上下文</li><li>清理上下文</li></ol>
+     *
+     * @param request 当前 HTTP 请求
+     * @param response 当前 HTTP 响应
+     * @param chain 后续过滤链
+     * @throws ServletException 过滤链处理失败时抛出
+     * @throws IOException 请求流处理失败时抛出
+     */
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {

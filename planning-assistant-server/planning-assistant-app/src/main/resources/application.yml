@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 spring:
   application:
@@ -24,11 +24,10 @@ jwt:
 wechat:
   appid: ${WECHAT_APPID}
   secret: ${WECHAT_SECRET}
-  dynamic-qr-enabled: ${WECHAT_DYNAMIC_QR_ENABLED:false}
-  fixed-qr-url: ${WECHAT_FIXED_QR_URL:}
 
 app:
   public-base-url: ${APP_PUBLIC_BASE_URL:https://localhost:8080}
+  fixed-qr-url: ${APP_FIXED_QR_URL:}
 
 deepseek:
   api-key: ${DEEPSEEK_API_KEY:}

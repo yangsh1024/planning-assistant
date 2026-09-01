@@ -81,4 +81,4 @@ if [[ "${RUN_EXPIRY_CHECK:-false}" == "true" ]]; then
   test "$HTTP_CODE" = 409
 fi
 
-echo "Agent Web API smoke checks passed. Dynamic/fixed QR UI and expiry timing still require the documented manual/real-device checks."
+echo "Agent Web API smoke checks passed. Dynamic QR UI and expiry timing still require the documented manual/real-device checks."

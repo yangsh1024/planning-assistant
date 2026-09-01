@@ -39,7 +39,7 @@ mvn clean package -pl planning-assistant-app -am
 ./start-server.zsh
 ```
 
-脚本会显式加载 `~/.my-source/planning-env.sh`，因为非交互式脚本不会自动读取 `~/.zshrc`；可用 `PLANNING_ENV_FILE` 覆盖该路径。执行 `./start-server.zsh --check` 可检查环境变量文件、必要的微信/JWT 配置、JDK 21 和 Maven 是否可用。脚本会在打包前检查 8080 端口，已有服务运行时会退出，避免覆盖运行中的 JAR。
+脚本会显式加载项目根目录的 `.my-source/server.env`，因为非交互式脚本不会自动读取 `~/.zshrc`；该目录已被 Git 忽略。可用 `PLANNING_ENV_FILE` 覆盖默认路径。执行 `./start-server.zsh --check` 可检查环境变量文件、必要的微信/JWT 配置、配置的 `SERVER_PORT`、JDK 21 和 Maven 是否可用。未配置 `SERVER_PORT` 时使用 8080；脚本会在打包前检查该端口，已有服务运行时会退出，避免覆盖运行中的 JAR。
 
 微信登录始终使用正式 `code2session`，启动环境必须提供 `WECHAT_APPID`、`WECHAT_SECRET` 和 Base64 编码的 `JWT_SECRET`；三者不写入仓库，也不提供模拟登录回退。真机、体验版和正式环境的小程序 API 地址必须使用微信后台已登记的 HTTPS 域名。
 
@@ -55,7 +55,7 @@ mvn clean package -pl planning-assistant-app -am
 
 启动脚本校验 JDK 21、必需配置、JAR 和 PID 状态；日志写入 `${LOG_DIR}/planning-assistant.out`，PID 写入 `${RUN_DIR}/planning-assistant.pid`。默认 JVM 参数为 `-Xms256m -Xmx512m`、G1 GC、OOM 退出、UTF-8 和上海时区，可通过 `JAVA_OPTS` 覆盖。
 
-Nginx 使用 `scripts/nginx-planning-assistant.conf.example` 作为 HTTPS 反向代理模板。替换域名和证书路径，确保小程序 `API_BASE_URL` 与 Nginx `server_name` 使用同一 HTTPS 域名；随后执行 `nginx -t` 并 reload。
+Nginx 使用 `scripts/nginx-planning-assistant.conf.example` 作为 HTTPS 反向代理模板。测试和生产环境分别将 Web 的 `dist` 部署到各自 Nginx 站点，并将模板中的 `__BACKEND_UPSTREAM__` 替换为该环境 `server.env` 的 `SERVER_PORT`（例如 `127.0.0.1:18081`）；前端始终以同域 `/api` 访问后端。后端的 `APP_PUBLIC_BASE_URL` 必须配置为该环境对外的同域 HTTPS 地址。替换域名和证书路径后，确保小程序 `API_BASE_URL` 与 Nginx `server_name` 使用同一 HTTPS 域名；随后执行 `nginx -t` 并 reload。
 
 ## 领域包结构（core 模块内部）
 
@@ -82,7 +82,7 @@ com.ysh.planning
 │   ├── service/        # ← Agent 可注入
 │   ├── repository/
 │   └── domain/
-├── webauth/            # Web 登录、六位码与一次性短票据
+├── webauth/            # Web 登录与一次性短票据
 │   ├── controller/
 │   ├── service/
 │   ├── repository/
@@ -127,13 +127,13 @@ public String createExpense(String category, BigDecimal amount, String note) {
 浏览器不能调用 `wx.login()`，Web 与小程序以 `t_user` 为统一身份：
 
 ```
-电脑 Web 创建请求 → 动态码或固定码 + 六位码 → 小程序确认 → 浏览器交换 Web Cookie
+电脑 Web 创建请求 → 固定小程序码 + 六位登录码 → 小程序确认 → 浏览器交换 Web Cookie
 小程序生成一次性短链 → 用户复制到浏览器 → Web 交换 Cookie
 ```
 
-- 登录请求有效 2 分钟，短链有效 60 秒，均为单次使用；浏览器证明、六位码和短链票据只保存摘要。
-- 六位码摘要具有活跃唯一约束；确认、拒绝或过期后清空摘要，创建时对碰撞进行有界重试。
-- 动态小程序码须先真机验证；未验证或不可用时设置 `WECHAT_DYNAMIC_QR_ENABLED=false` 并提供 `WECHAT_FIXED_QR_URL`。
+- 登录请求有效 2 分钟，短链有效 60 秒，均为单次使用；浏览器证明、六位登录码和短链票据只保存摘要。
+- 固定小程序码指向 `pages/auth/web-login/web-login`，由 `scripts/generate-fixed-miniapp-qr.mjs` 使用微信 `getwxacode` 一次性生成；上传到静态资源域名后，通过 `APP_FIXED_QR_URL` 配置。该工具不调用 `getwxacodeunlimit`。
+  生成示例：`WECHAT_APPID=… WECHAT_SECRET=… node scripts/generate-fixed-miniapp-qr.mjs /tmp/miniapp-web-login-qr.png`。
 - Web 静态资源与 `/api` 使用同一 HTTPS 域名。认证 Cookie 为 `HttpOnly; Secure; SameSite=Lax`；CSRF Cookie 可读，Cookie 鉴权的非安全请求必须提交匹配的 `X-CSRF-TOKEN`。小程序 Bearer 请求不执行此 CSRF 校验。
 
 ## 各模块接口
@@ -208,7 +208,7 @@ public String createExpense(String category, BigDecimal amount, String note) {
 
 阶段二表职责：
 
-- `t_web_login_request`：电脑端登录请求、状态、过期时间，以及浏览器凭据和六位码的摘要；不保存明文票据。
+- `t_web_login_request`：电脑端登录请求、状态、过期时间，以及浏览器凭据和六位登录码摘要；不保存明文票据。`fallback_code_hash` 为历史列名，运行时映射为登录码摘要。
 - `t_web_sso_ticket`：小程序复制登录链接的一次性短票据摘要、过期和消费状态。
 - `t_agent_session`：当前用户的会话、标题和最近活跃时间。
 - `t_agent_message`：仅保存 USER/ASSISTANT 可见消息、模型、用量与失败状态；不保存推理或内部工具消息。
@@ -275,7 +275,7 @@ CREATE TABLE IF NOT EXISTS t_expense (
 
 已有阶段一数据库升级时执行 `scripts/migrate-phase2-agent-web.sql`；新建开发库仍使用 `scripts/init-dev-database.sql`。
 
-阶段二生产配置均通过环境变量注入：`DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL`、`DEEPSEEK_MODEL`、`AGENT_TIMEOUT_SECONDS`、`AGENT_MAX_OUTPUT_TOKENS`、`AGENT_PER_USER_MINUTE_LIMIT`、`APP_PUBLIC_BASE_URL`、`WECHAT_DYNAMIC_QR_ENABLED`、`WECHAT_FIXED_QR_URL`。密钥、Cookie、对话正文、账本明细和推理内容不得写入生产日志。
+阶段二生产配置均通过环境变量注入：`DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL`、`DEEPSEEK_MODEL`、`AGENT_TIMEOUT_SECONDS`、`AGENT_MAX_OUTPUT_TOKENS`、`AGENT_PER_USER_MINUTE_LIMIT`、`APP_PUBLIC_BASE_URL`、`APP_FIXED_QR_URL`。密钥、Cookie、对话正文、账本明细和推理内容不得写入生产日志。
 
 > - `t_category` 使用 `is_deleted` 标记已删除的自定义科目，重名直接复用已有科目，不新建
 > - `t_budget_item` 新增 `sort_order`，维护用户拖拽后的科目顺序，按月独立

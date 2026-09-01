@@ -3,10 +3,20 @@ package com.ysh.planning.agent.tool;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 定义模型可调用的受限账本工具契约。
+ * 写工具只生成确认卡片，避免模型直接触发账本数据变更。
+ */
 public final class AgentToolCatalog {
     private AgentToolCatalog() {
     }
 
+    /**
+     * 返回模型请求使用的工具定义。
+     * <ol><li>声明查询</li><li>声明确认</li><li>限制字段</li></ol>
+     *
+     * @return 受支持工具的 JSON Schema 描述
+     */
     public static List<Map<String, Object>> definitions() {
         return List.of(
                 tool("read_budget_summary", "查询指定月份预算执行", props(Map.of("yearMonth", string("yyyy-MM"))), List.of("yearMonth")),

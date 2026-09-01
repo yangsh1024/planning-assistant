@@ -16,7 +16,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.dao.DuplicateKeyException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -41,7 +40,6 @@ class WebAuthServiceTest {
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(7L, null, List.of()));
         service = new WebAuthService(loginRequestMapper, ssoTicketMapper, attemptLimiter);
         ReflectionTestUtils.setField(service, "publicBaseUrl", "https://ledger.example");
-        ReflectionTestUtils.setField(service, "dynamicQrEnabled", false);
         ReflectionTestUtils.setField(service, "fixedQrUrl", "https://ledger.example/miniapp-web-login-qr.png");
     }
 
@@ -49,30 +47,20 @@ class WebAuthServiceTest {
     void clearContext() { SecurityContextHolder.clearContext(); }
 
     @Test
-    void storesOnlyCoarseDeviceSummaryInsteadOfFullUserAgent() {
+    void createsFixedQrLogin() {
         String userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/128.0.0.0 Safari/537.36";
+        when(loginRequestMapper.insert(any(WebLoginRequest.class))).thenReturn(1);
 
         WebLoginRequestDto result = service.createBrowserLogin(userAgent);
 
         ArgumentCaptor<WebLoginRequest> captor = ArgumentCaptor.forClass(WebLoginRequest.class);
         verify(loginRequestMapper).insert(captor.capture());
         assertThat(captor.getValue().getDeviceLabel()).isEqualTo("Chrome · macOS");
-        assertThat(captor.getValue().getFallbackCodeHash()).hasSize(64);
-        assertThat(captor.getValue().getFallbackCodeHash()).isNotEqualTo(result.getFallbackCode());
-        assertThat(result.getMode()).isEqualTo("FALLBACK_CODE");
+        assertThat(captor.getValue().getLoginCodeHash()).hasSize(64);
+        assertThat(captor.getValue().getLoginCodeHash()).isNotEqualTo(result.getLoginCode());
+        assertThat(result.getMode()).isEqualTo("FIXED_QR_CODE");
+        assertThat(result.getLoginCode()).matches("\\d{6}");
         assertThat(result.getFixedQrCodeUrl()).isEqualTo("https://ledger.example/miniapp-web-login-qr.png");
-    }
-
-    @Test
-    void retriesWhenAnotherActiveRequestAlreadyUsesGeneratedCode() {
-        when(loginRequestMapper.insert(any(WebLoginRequest.class)))
-                .thenThrow(new DuplicateKeyException("fallback collision"))
-                .thenReturn(1);
-
-        WebLoginRequestDto result = service.createBrowserLogin("Chrome");
-
-        assertThat(result.getFallbackCode()).matches("\\d{6}");
-        verify(loginRequestMapper, times(2)).insert(any(WebLoginRequest.class));
     }
 
     @Test

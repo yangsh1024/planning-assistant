@@ -8,9 +8,9 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
+/** 表示用户在某个月份保存的一份整体预算方案。 */
 @Data
 @TableName("t_budget_plan")
-/** 表示用户在某个月份保存的一份整体预算方案。 */
 public class BudgetPlan {
 
     @TableId(type = IdType.AUTO)
